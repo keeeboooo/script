@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty'); if echo \"$file\" | grep -qE '\\.(ts|tsx)$'; then /Users/murashigekeisuke/.nvm/versions/node/v22.18.0/bin/npx tsc --noEmit 2>&1 | head -40; /Users/murashigekeisuke/.nvm/versions/node/v22.18.0/bin/npm run lint 2>&1 | head -40; fi",
+            "timeout": 60,
+            "statusMessage": "tsc & lint チェック中..."
+          }
+        ]
+      }
+    ]
+  }
+}

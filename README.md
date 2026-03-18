@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Script: Your Life's Algorithm
 
-## Getting Started
+**"Follow the Script."**
 
-First, run the development server:
+Scriptは、既存のToDoリストが抱える「管理するだけで実行されない」という課題を、生成AIによる「タスク分解」と「実行支援」で解決するパーソナル・マネジメントツールです。
+
+## 🚀 Core Features
+
+### 1. Magic Breakdown
+曖昧な「やりたいこと」を入力するだけで、AIが即座に実行可能な具体的アクション（サブタスク）へ分解します。
+
+### 2. Dual-Mode Interface (Hybrid View)
+- **Projects View**: 目標（親タスク）ごとの進捗を「プログレスリング」で美しく可視化。アコーディオン形式で詳細を管理。
+- **Today View**: すべてのサブタスクをフラットに一覧化。今日の実行順に合わせて自由にドラッグ＆ドロップで並び替えが可能。
+
+### 3. The Thread (Context Awareness)
+各タスクが「自分の人生におけるどの目標（Compass）に繋がっているか」を常に意識できるUI設計。
+
+## 🛠 Tech Stack
+- **Framework**: Next.js (App Router)
+- **Styling**: Tailwind CSS + Custom Glassmorphism System
+- **Animation**: Framer Motion
+- **AI**: Gemini 2.5 Flash
+- **Icons**: Lucide React
+
+## 📦 Getting Started
 
 ```bash
+# Install dependencies
+npm install
+
+# Setup Environment Variables
+# Create .env.local and add GEMINI_API_KEY
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
