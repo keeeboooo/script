@@ -18,7 +18,7 @@ export function ModeSwitch() {
   const activeIndex = isCompass ? 1 : 0;
 
   return (
-    <nav className="flex items-center gap-1 p-1 rounded-2xl glass" role="tablist" aria-label="ナビゲーションモード">
+    <nav className="flex items-center gap-1 p-1 rounded-2xl glass" aria-label="ナビゲーションモード">
       {modes.map((mode, index) => {
         const isActive = index === activeIndex;
         const Icon = mode.icon;
@@ -27,8 +27,7 @@ export function ModeSwitch() {
           <Link
             key={mode.href}
             href={mode.href}
-            role="tab"
-            aria-selected={isActive}
+            aria-current={isActive ? "page" : undefined}
             className="relative"
           >
             <motion.div
