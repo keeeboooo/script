@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Sparkles, RotateCcw, BookOpen } from "lucide-react";
+import { Send, Heart, MessageCircle, RotateCcw, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
 import type { ChatMessage } from "@/hooks/useCompass";
@@ -55,7 +55,7 @@ export function PhilosophyChat({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-compass" />
+          <Heart className="w-5 h-5 text-compass" />
           <h2 className="text-lg font-semibold tracking-tight">価値観を発掘する</h2>
         </div>
         <div className="flex items-center gap-2">
@@ -100,7 +100,7 @@ export function PhilosophyChat({
             animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center h-full text-center py-12"
           >
-            <Sparkles className="w-8 h-8 text-compass/40 mb-4" />
+            <MessageCircle className="w-8 h-8 text-compass/40 mb-4" />
             <p className="text-muted-foreground text-sm max-w-xs">
               AIコーチとの対話で、あなたの価値観を発掘しましょう。まずは何か話しかけてみてください。
             </p>

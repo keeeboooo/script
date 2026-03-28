@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" rx="8" fill="#ffffff"/>
+  <!-- 外周の円 -->
+  <circle cx="16" cy="16" r="11" stroke="#1a1a2e" stroke-width="1.5" stroke-opacity="0.2"/>
+  <!-- 羅針盤の針: 北（ダーク） -->
+  <path d="M16 4 L20 16 L16 12.5 L12 16 Z" fill="#1a1a2e"/>
+  <!-- 羅針盤の針: 南（アクセント） -->
+  <path d="M16 28 L20 16 L16 19.5 L12 16 Z" fill="#6366f1"/>
+</svg>

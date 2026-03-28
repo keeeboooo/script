@@ -4,7 +4,7 @@ import { TaskInput } from "@/components/features/task/TaskInput";
 import { TaskList } from "@/components/features/task/TaskList";
 import { useTasks } from "@/hooks/useTasks";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2 } from "lucide-react";
+import { Trash2, Sparkles } from "lucide-react";
 
 const springTransition = { type: "spring" as const, stiffness: 260, damping: 20 };
 
@@ -19,11 +19,12 @@ export default function Home() {
     reorderTasks,
     clearCompleted,
     isLoading,
+    isBreakingDown,
     completedCount,
   } = useTasks();
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] w-full max-w-3xl mx-auto space-y-12">
+    <div className="flex flex-col items-center w-full max-w-3xl mx-auto space-y-12 pt-8">
       <div className="text-center space-y-4">
         <h1 className="text-3xl sm:text-5xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-white to-white/50">
           Follow the Script.
@@ -40,13 +41,21 @@ export default function Home() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex justify-center mt-12"
+            className="flex flex-col gap-4 w-full mt-12"
           >
-            <div className="flex flex-col gap-4 w-full">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-24 w-full glass rounded-2xl animate-pulse bg-secondary/20" />
-              ))}
-            </div>
+            {isBreakingDown && (
+              <motion.div
+                className="flex items-center justify-center gap-2 text-sm text-muted-foreground"
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Sparkles className="w-4 h-4" />
+                AIがタスクを分解中...
+              </motion.div>
+            )}
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-24 w-full glass rounded-2xl animate-pulse bg-secondary/20" />
+            ))}
           </motion.div>
         )}
 

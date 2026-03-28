@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Target, ArrowUp } from "lucide-react";
+import { Target, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
 
@@ -100,7 +100,7 @@ export function GoalInput({ onSubmit, isLoading }: GoalInputProps) {
               : "bg-secondary text-muted-foreground cursor-not-allowed"
           )}
         >
-          <ArrowUp className="w-5 h-5" />
+          <Sparkles className="w-5 h-5" />
         </motion.button>
       </div>
     </motion.form>

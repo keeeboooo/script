@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles } from "lucide-react";
 import { useCompass } from "@/hooks/useCompass";
 import { useTasks } from "@/hooks/useTasks";
 import { PhilosophyChat } from "@/components/features/compass/PhilosophyChat";
@@ -124,6 +125,14 @@ export default function CompassPage() {
             animate={{ opacity: 1 }}
             className="flex flex-col gap-4 w-full"
           >
+            <motion.div
+              className="flex items-center justify-center gap-2 text-sm text-muted-foreground"
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Sparkles className="w-4 h-4 text-compass" />
+              AIがロードマップを生成中...
+            </motion.div>
             {[1, 2, 3, 4, 5].map((i) => (
               <div
                 key={i}

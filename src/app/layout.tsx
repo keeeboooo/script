@@ -11,6 +11,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Script",
   description: "Follow the Script. AI-powered task breakdown and execution partner.",
+  icons: {
+    icon: "/favicon.svg",
+  },
   openGraph: {
     title: "Script",
     description: "Follow the Script. AI-powered task breakdown and execution partner.",

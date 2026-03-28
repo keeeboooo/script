@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, ArrowUp } from "lucide-react";
+import { Sparkles, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
 
@@ -33,7 +33,7 @@ export function TaskInput({ onSubmit, isLoading }: TaskInputProps) {
       transition={{ ...springTransition, delay: 0.1 }}
     >
       <div className="pl-4 pr-3 flex items-center justify-center text-muted-foreground">
-        <Sparkles className="w-5 h-5" />
+        <ListTodo className="w-5 h-5" />
       </div>
       <input
         type="text"
@@ -60,7 +60,7 @@ export function TaskInput({ onSubmit, isLoading }: TaskInputProps) {
               : "bg-secondary text-muted-foreground cursor-not-allowed"
           )}
         >
-          <ArrowUp className="w-5 h-5" />
+          <Sparkles className="w-5 h-5" />
         </motion.button>
       </div>
     </motion.form>

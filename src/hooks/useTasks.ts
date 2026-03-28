@@ -268,6 +268,7 @@ export function useTasks() {
   return {
     tasks,
     isLoading: isLoading || isFetching,
+    isBreakingDown: isLoading,
     completedCount,
     breakdownTask,
     toggleTask,
