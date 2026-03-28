@@ -51,7 +51,9 @@ export function useTasks() {
         .select("*")
         .order("position", { ascending: true });
 
-      if (!error && data) {
+      if (error) {
+        console.error("Failed to fetch tasks:", error);
+      } else if (data) {
         setTasks(data.map(rowToTask));
       }
       setIsFetching(false);
@@ -163,7 +165,10 @@ export function useTasks() {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+          console.warn("breakdownTask: user not authenticated");
+          return;
+        }
 
         const parentId = uuidv4();
 
