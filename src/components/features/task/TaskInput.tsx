@@ -39,10 +39,10 @@ export function TaskInput({ onSubmit, isLoading }: TaskInputProps) {
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="何をしたいですか？ 例: 「うどんを手作りしたい」"
+        placeholder="やりたいことを入力... 例:「うどん手作り」"
         aria-label="新しいタスクを入力"
         aria-busy={isLoading}
-        className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 py-3 text-lg"
+        className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 py-3 text-base sm:text-lg"
         disabled={isLoading}
       />
       <div className="pr-2">

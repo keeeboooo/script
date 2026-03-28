@@ -24,12 +24,12 @@ export default function Home() {
   } = useTasks();
 
   return (
-    <div className="flex flex-col items-center w-full max-w-3xl mx-auto space-y-12 pt-8">
-      <div className="text-center space-y-4">
-        <h1 className="text-3xl sm:text-5xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-white to-white/50">
+    <div className="flex flex-col items-center w-full max-w-3xl mx-auto space-y-6 pt-4">
+      <div className="text-center space-y-1">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-white to-white/50">
           Follow the Script.
         </h1>
-        <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto">
+        <p className="text-xs sm:text-sm text-muted-foreground max-w-xl mx-auto">
           達成したいことを入力すると、AIが実行可能なステップに分解します。
         </p>
       </div>

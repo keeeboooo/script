@@ -64,18 +64,18 @@ export default function CompassPage() {
   );
 
   return (
-    <div className="flex flex-col w-full max-w-3xl mx-auto space-y-16 pt-8">
+    <div className="flex flex-col w-full max-w-3xl mx-auto space-y-8 pt-4">
       {/* Hero */}
       <motion.div
-        className="text-center space-y-4"
+        className="text-center space-y-1"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...springTransition, delay: 0.05 }}
       >
-        <h1 className="text-3xl sm:text-5xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-compass via-compass-muted to-compass/50">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-compass via-compass-muted to-compass/50">
           Compass
         </h1>
-        <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto">
+        <p className="text-xs sm:text-sm text-muted-foreground max-w-xl mx-auto">
           立ち止まって考え、方向性を定める。あなたの価値観と人生のロードマップを描きます。
         </p>
       </motion.div>
