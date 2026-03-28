@@ -106,7 +106,7 @@ export function TaskItem({
       }}
       onDragEnd={onDragEnd}
       className={cn(
-        "group p-4 rounded-2xl w-full",
+        "group p-3 rounded-2xl w-full",
         "glass hover:glass-hover transition-colors duration-300",
         task.status === "done" && "opacity-50 grayscale",
         task.status === "in_progress" &&
@@ -118,16 +118,11 @@ export function TaskItem({
     >
       <div className="flex items-start gap-3">
         {/* Drag handle */}
-        <div
-          className={cn(
-            "mt-1.5 flex-shrink-0 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity",
-            onDragStart
-              ? "cursor-grab active:cursor-grabbing"
-              : "cursor-default opacity-0 group-hover:opacity-0"
-          )}
-        >
-          <GripVertical className="w-4 h-4" />
-        </div>
+        {onDragStart && (
+          <div className="mt-1.5 flex-shrink-0 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
+            <GripVertical className="w-4 h-4" />
+          </div>
+        )}
 
         {/* Toggle button */}
         <motion.button
@@ -195,7 +190,8 @@ export function TaskItem({
         </motion.button>
 
         {/* Content */}
-        <div className="flex-1 min-w-0 space-y-2">
+        <div className="flex-1 min-w-0 space-y-1.5">
+          {/* Title row */}
           <div className="flex items-center gap-2">
             {isEditing ? (
               <input
@@ -206,7 +202,7 @@ export function TaskItem({
                 onBlur={handleEditSubmit}
                 onKeyDown={handleKeyDown}
                 aria-label={`タスク「${task.title}」を編集`}
-                className="flex-1 bg-transparent border-b border-foreground/20 outline-none text-lg font-medium tracking-tight py-0.5"
+                className="flex-1 bg-transparent border-b border-foreground/20 outline-none text-base sm:text-lg font-medium tracking-tight py-0.5"
               />
             ) : (
               <h3
@@ -217,7 +213,7 @@ export function TaskItem({
                   }
                 }}
                 className={cn(
-                  "text-lg font-medium tracking-tight cursor-default",
+                  "text-base sm:text-lg font-medium tracking-tight cursor-default",
                   (task.status === "done" || task.status === "canceled") &&
                     "line-through text-muted-foreground",
                   task.status === "in_progress" && "text-foreground"
@@ -239,70 +235,23 @@ export function TaskItem({
               )}
           </div>
 
-          {/* Metadata */}
-          {(task.estimatedTime || task.actionLink || hasSubtasks) &&
-            task.status !== "done" &&
-            task.status !== "canceled" && (
-              <div className="flex flex-wrap items-center gap-2 mt-1">
-                {hasSubtasks && (
-                  <div
-                    className={cn(
-                      "flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium border transition-colors",
-                      isAllSubtasksCompleted
-                        ? "bg-primary/10 border-primary/20 text-primary"
-                        : "bg-secondary/30 border-secondary-foreground/10 text-muted-foreground"
-                    )}
-                  >
-                    <svg
-                      className="w-3.5 h-3.5 opacity-70"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
+          {/* Bottom row: metadata + actions */}
+          {task.status !== "canceled" && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Metadata badges */}
+              {task.status !== "done" && (
+                <>
+                  {hasSubtasks && (
+                    <div
+                      className={cn(
+                        "flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium border transition-colors",
+                        isAllSubtasksCompleted
+                          ? "bg-primary/10 border-primary/20 text-primary"
+                          : "bg-secondary/30 border-secondary-foreground/10 text-muted-foreground"
+                      )}
                     >
-                      <path d="M3 7V5a2 2 0 0 1 2-2h2" />
-                      <path d="M17 3h2a2 2 0 0 1 2 2v2" />
-                      <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
-                      <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                    <span>
-                      {completedSubtasks}/{totalSubtasks} サブタスク
-                    </span>
-                  </div>
-                )}
-                {task.estimatedTime && (
-                  <span className="flex items-center gap-1 bg-secondary/50 px-2 py-0.5 rounded-md text-xs text-muted-foreground">
-                    <span className="opacity-70">⏱</span> {task.estimatedTime}
-                  </span>
-                )}
-                {task.actionLink && (
-                  <a
-                    href={task.actionLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-md hover:bg-primary/20 transition-colors text-xs font-medium"
-                  >
-                    <span className="opacity-70">↗</span> Link
-                  </a>
-                )}
-                {hasSubtasks && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsExpanded(!isExpanded);
-                    }}
-                    aria-expanded={isExpanded}
-                    aria-label={isExpanded ? "サブタスクを隠す" : "サブタスクを表示"}
-                    className="flex items-center gap-1.5 bg-secondary/30 px-2 py-0.5 rounded-md hover:bg-secondary/50 transition-colors text-xs text-muted-foreground ml-auto"
-                  >
-                    <span>{isExpanded ? "サブタスクを隠す" : "サブタスクを表示"}</span>
-                    <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
                       <svg
-                        width="12"
-                        height="12"
+                        className="w-3.5 h-3.5 opacity-70"
                         viewBox="0 0 24 24"
                         fill="none"
                         stroke="currentColor"
@@ -310,70 +259,119 @@ export function TaskItem({
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       >
-                        <path d="m6 9 6 6 6-6" />
+                        <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+                        <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                        <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+                        <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+                        <circle cx="12" cy="12" r="3" />
                       </svg>
-                    </motion.div>
-                  </button>
-                )}
-              </div>
-            )}
-        </div>
+                      <span>
+                        {completedSubtasks}/{totalSubtasks} サブタスク
+                      </span>
+                    </div>
+                  )}
+                  {task.estimatedTime && (
+                    <span className="flex items-center gap-1 bg-secondary/50 px-2 py-0.5 rounded-md text-xs text-muted-foreground">
+                      <span className="opacity-70">⏱</span> {task.estimatedTime}
+                    </span>
+                  )}
+                  {task.actionLink && (
+                    <a
+                      href={task.actionLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded-md hover:bg-primary/20 transition-colors text-xs font-medium"
+                    >
+                      <span className="opacity-70">↗</span> Link
+                    </a>
+                  )}
+                  {hasSubtasks && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsExpanded(!isExpanded);
+                      }}
+                      aria-expanded={isExpanded}
+                      aria-label={isExpanded ? "サブタスクを隠す" : "サブタスクを表示"}
+                      className="flex items-center gap-1.5 bg-secondary/30 px-2 py-0.5 rounded-md hover:bg-secondary/50 transition-colors text-xs text-muted-foreground"
+                    >
+                      <span>{isExpanded ? "閉じる" : "詳細"}</span>
+                      <motion.div animate={{ rotate: isExpanded ? 180 : 0 }}>
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="m6 9 6 6 6-6" />
+                        </svg>
+                      </motion.div>
+                    </button>
+                  )}
+                </>
+              )}
 
-        {/* Execution Action */}
-        {task.status !== "done" && task.status !== "canceled" && !isEditing && (
-          <div className="flex items-center flex-shrink-0 mt-0.5 ml-2">
-            {task.status === "todo" && onChangeStatus && (
-              <motion.button
-                onClick={() => onChangeStatus(task.id, "in_progress")}
-                className="group/btn flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-all font-medium text-xs tracking-wide"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                transition={springTransition}
-                title="開始する"
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>START</span>
-              </motion.button>
-            )}
-          </div>
-        )}
+              {/* Spacer */}
+              <div className="flex-1" />
 
-        {/* Management Action buttons */}
-        <div className="flex items-center gap-1 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-1 ml-1">
-          {task.status === "in_progress" && onChangeStatus && (
-            <motion.button
-              onClick={() => onChangeStatus(task.id, "todo")}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-              whileTap={{ scale: 0.9 }}
-              transition={springTransition}
-              title="Todoに戻す"
-            >
-              <Undo2 className="w-3.5 h-3.5" />
-            </motion.button>
+              {/* Action buttons */}
+              {!isEditing && (
+                <>
+                  {task.status === "todo" && onChangeStatus && (
+                    <motion.button
+                      onClick={() => onChangeStatus(task.id, "in_progress")}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-all font-medium text-xs tracking-wide"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={springTransition}
+                      title="開始する"
+                    >
+                      <Play className="w-3 h-3 fill-current" />
+                      <span className="hidden sm:inline">START</span>
+                    </motion.button>
+                  )}
+                  {task.status === "in_progress" && onChangeStatus && (
+                    <motion.button
+                      onClick={() => onChangeStatus(task.id, "todo")}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                      whileTap={{ scale: 0.9 }}
+                      transition={springTransition}
+                      title="Todoに戻す"
+                    >
+                      <Undo2 className="w-3.5 h-3.5" />
+                    </motion.button>
+                  )}
+                  {task.status !== "done" && (
+                    <motion.button
+                      onClick={() => {
+                        setEditValue(task.title);
+                        setIsEditing(true);
+                      }}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                      whileTap={{ scale: 0.9 }}
+                      transition={springTransition}
+                      title="編集"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </motion.button>
+                  )}
+                  <motion.button
+                    onClick={() => onDelete(task.id)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive-foreground hover:bg-destructive/20 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                    whileTap={{ scale: 0.9 }}
+                    transition={springTransition}
+                    title="削除"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </motion.button>
+                </>
+              )}
+            </div>
           )}
-          {task.status !== "done" && task.status !== "canceled" && !isEditing && (
-            <motion.button
-              onClick={() => {
-                setEditValue(task.title);
-                setIsEditing(true);
-              }}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-              whileTap={{ scale: 0.9 }}
-              transition={springTransition}
-              title="編集"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </motion.button>
-          )}
-          <motion.button
-            onClick={() => onDelete(task.id)}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive-foreground hover:bg-destructive/20 transition-colors"
-            whileTap={{ scale: 0.9 }}
-            transition={springTransition}
-            title="削除"
-          >
-            <X className="w-3.5 h-3.5" />
-          </motion.button>
         </div>
       </div>
 

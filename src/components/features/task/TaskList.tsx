@@ -153,10 +153,10 @@ export function TaskList({
       variants={listVariants}
       initial="hidden"
       animate="show"
-      className="flex flex-col w-full max-w-2xl mx-auto mt-8 px-2"
+      className="flex flex-col w-full max-w-2xl mx-auto mt-4 px-2"
     >
       {/* View Toggle */}
-      <div className="flex justify-center mb-8">
+      <div className="flex justify-center mb-4">
         <div className="flex p-1 bg-secondary/20 rounded-2xl glass">
           <button
             onClick={() => setViewMode("project")}
@@ -185,7 +185,7 @@ export function TaskList({
         </div>
       </div>
 
-      {renderGroup(inProgressTasks, "In Progress", true)}
+      {renderGroup(inProgressTasks, "In Progress")}
       {renderGroup(todoTasks, "Todo")}
       {renderGroup(doneTasks, "Done")}
     </motion.div>

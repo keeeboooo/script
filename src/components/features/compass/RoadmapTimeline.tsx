@@ -125,7 +125,7 @@ function AddMilestoneForm({ onAdd, onCancel }: AddMilestoneFormProps) {
       className="glass-compass rounded-2xl p-4 space-y-3"
     >
       <p className="text-xs font-medium text-compass/70 uppercase tracking-wider">新しいマイルストーン</p>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <input
           autoFocus
           type="text"
@@ -250,12 +250,12 @@ export function RoadmapTimeline({
 
                 {/* Content */}
                 <div className="flex-1 glass-compass rounded-2xl p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start justify-between gap-2 flex-wrap">
                     <div className="flex-1 min-w-0 space-y-1">
                       <InlineEdit
                         value={milestone.period}
                         onSave={(v) => onUpdateMilestone(milestone.id, { period: v })}
-                        className="text-xs font-medium text-compass/70 uppercase tracking-wider"
+                        className="text-xs font-medium text-compass/70 uppercase tracking-wider whitespace-nowrap"
                         inputClassName="text-xs uppercase"
                       />
                       <InlineEdit
