@@ -102,13 +102,14 @@ export function TaskList({
   const renderGroup = (
     groupTasks: TaskWithIndex[],
     title: string,
-    showEmptyIfZero = false
+    showEmptyIfZero = false,
+    compact = false
   ) => {
     if (groupTasks.length === 0 && !showEmptyIfZero) return null;
 
     return (
-      <div className="flex flex-col gap-3 mb-6">
-        <motion.div layout className="flex items-center justify-between px-2 mb-1">
+      <div className="flex flex-col gap-1.5 mb-3">
+        <motion.div layout className="flex items-center justify-between mb-1">
           <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
             {title}{" "}
             <span className="text-xs ml-1 bg-secondary/30 px-2 py-0.5 rounded-full">
@@ -130,6 +131,7 @@ export function TaskList({
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
+              isSubTask={compact}
             />
           ))}
           {groupTasks.length === 0 && showEmptyIfZero && (
@@ -153,16 +155,16 @@ export function TaskList({
       variants={listVariants}
       initial="hidden"
       animate="show"
-      className="flex flex-col w-full max-w-2xl mx-auto mt-4 px-2"
+      className="flex flex-col w-full max-w-2xl mx-auto mt-4 px-0 sm:px-2"
     >
       {/* View Toggle */}
-      <div className="flex justify-center mb-4">
+      <div className="flex justify-center mb-3">
         <div className="flex p-1 bg-secondary/20 rounded-2xl glass">
           <button
             onClick={() => setViewMode("project")}
             aria-pressed={viewMode === "project"}
             className={cn(
-              "px-6 py-2 rounded-xl text-sm font-medium transition-all duration-300",
+              "px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300",
               viewMode === "project"
                 ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -174,7 +176,7 @@ export function TaskList({
             onClick={() => setViewMode("today")}
             aria-pressed={viewMode === "today"}
             className={cn(
-              "px-6 py-2 rounded-xl text-sm font-medium transition-all duration-300",
+              "px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300",
               viewMode === "today"
                 ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -185,9 +187,9 @@ export function TaskList({
         </div>
       </div>
 
-      {renderGroup(inProgressTasks, "In Progress")}
-      {renderGroup(todoTasks, "Todo")}
-      {renderGroup(doneTasks, "Done")}
+      {renderGroup(inProgressTasks, "In Progress", false, viewMode === "today")}
+      {renderGroup(todoTasks, "Todo", false, viewMode === "today")}
+      {renderGroup(doneTasks, "Done", false, viewMode === "today")}
     </motion.div>
   );
 }

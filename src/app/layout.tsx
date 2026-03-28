@@ -39,7 +39,7 @@ export default function RootLayout({
 
         <HeaderNav />
 
-        <main className="max-w-3xl mx-auto px-4 sm:px-8 pt-16 pb-8 min-h-screen">
+        <main className="max-w-3xl mx-auto px-4 sm:px-8 pt-14 pb-8 min-h-screen">
           {children}
         </main>
       </body>

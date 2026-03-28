@@ -32,6 +32,7 @@ interface TaskItemProps {
   onDragStart?: (index: number) => void;
   onDragOver?: (index: number) => void;
   onDragEnd?: () => void;
+  isSubTask?: boolean;
 }
 
 const itemVariants = {
@@ -50,11 +51,12 @@ export function TaskItem({
   onDragStart,
   onDragOver,
   onDragEnd,
+  isSubTask = false,
 }: TaskItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(task.title);
   const [isExpanded, setIsExpanded] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const subTasks = task.subTasks ?? [];
   const hasSubtasks = subTasks.length > 0;
@@ -67,8 +69,11 @@ export function TaskItem({
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+      const el = inputRef.current;
+      el.focus();
+      el.select();
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
     }
   }, [isEditing]);
 
@@ -106,7 +111,7 @@ export function TaskItem({
       }}
       onDragEnd={onDragEnd}
       className={cn(
-        "group p-3 rounded-2xl w-full",
+        isSubTask ? "group px-2 py-1 rounded-xl w-full" : "group px-2.5 py-2 sm:p-3 rounded-2xl w-full",
         "glass hover:glass-hover transition-colors duration-300",
         task.status === "done" && "opacity-50 grayscale",
         task.status === "in_progress" &&
@@ -116,10 +121,10 @@ export function TaskItem({
       whileHover={{ y: -2 }}
       transition={springTransition}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-1.5">
         {/* Drag handle */}
         {onDragStart && (
-          <div className="mt-1.5 flex-shrink-0 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
+          <div className="hidden sm:block mt-1.5 flex-shrink-0 text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
             <GripVertical className="w-4 h-4" />
           </div>
         )}
@@ -128,13 +133,16 @@ export function TaskItem({
         <motion.button
           onClick={() => onToggle(task.id)}
           aria-label={task.status === "done" ? "タスクを未完了に戻す" : "タスクを完了する"}
-          className="mt-1 relative flex items-center justify-center w-6 h-6 flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+          className={cn(
+            "mt-1 relative flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors",
+            isSubTask ? "w-4 h-4" : "w-6 h-6"
+          )}
           whileTap={{ scale: 0.8 }}
           transition={springTransition}
         >
           {hasSubtasks ? (
             <>
-              <svg className="w-6 h-6 -rotate-90 transform" viewBox="0 0 24 24">
+              <svg className={cn("w-full h-full -rotate-90 transform")} viewBox="0 0 24 24">
                 <circle
                   cx="12"
                   cy="12"
@@ -172,16 +180,16 @@ export function TaskItem({
                   animate={{ scale: 1, opacity: 1 }}
                   className="absolute inset-0 flex items-center justify-center text-foreground"
                 >
-                  <CheckCircle2 className="w-6 h-6" />
+                  <CheckCircle2 className="w-full h-full" />
                 </motion.div>
               )}
             </>
           ) : task.status === "done" ? (
-            <CheckCircle2 className="w-6 h-6 text-foreground" />
+            <CheckCircle2 className="w-full h-full text-foreground" />
           ) : (
             <Circle
               className={cn(
-                "w-6 h-6",
+                "w-full h-full",
                 task.status === "in_progress" && "text-primary opacity-60",
                 task.status === "canceled" && "opacity-30"
               )}
@@ -194,15 +202,19 @@ export function TaskItem({
           {/* Title row */}
           <div className="flex items-center gap-2">
             {isEditing ? (
-              <input
+              <textarea
                 ref={inputRef}
-                type="text"
                 value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
+                onChange={(e) => {
+                  setEditValue(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
                 onBlur={handleEditSubmit}
                 onKeyDown={handleKeyDown}
                 aria-label={`タスク「${task.title}」を編集`}
-                className="flex-1 bg-transparent border-b border-foreground/20 outline-none text-base sm:text-lg font-medium tracking-tight py-0.5"
+                rows={1}
+                className="flex-1 bg-transparent border-b border-foreground/20 outline-none text-base sm:text-lg font-medium tracking-tight py-0.5 resize-none overflow-hidden"
               />
             ) : (
               <h3
@@ -237,10 +249,10 @@ export function TaskItem({
 
           {/* Bottom row: metadata + actions */}
           {task.status !== "canceled" && (
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 overflow-hidden">
               {/* Metadata badges */}
               {task.status !== "done" && (
-                <>
+                <div className="flex items-center gap-2 min-w-0">
                   {hasSubtasks && (
                     <div
                       className={cn(
@@ -250,24 +262,8 @@ export function TaskItem({
                           : "bg-secondary/30 border-secondary-foreground/10 text-muted-foreground"
                       )}
                     >
-                      <svg
-                        className="w-3.5 h-3.5 opacity-70"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M3 7V5a2 2 0 0 1 2-2h2" />
-                        <path d="M17 3h2a2 2 0 0 1 2 2v2" />
-                        <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
-                        <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                      <span>
-                        {completedSubtasks}/{totalSubtasks} サブタスク
-                      </span>
+                      <span>{completedSubtasks}/{totalSubtasks}</span>
+                      <span className="hidden sm:inline">サブタスク</span>
                     </div>
                   )}
                   {task.estimatedTime && (
@@ -285,6 +281,7 @@ export function TaskItem({
                       <span className="opacity-70">↗</span> Link
                     </a>
                   )}
+
                   {hasSubtasks && (
                     <button
                       onClick={(e) => {
@@ -312,7 +309,7 @@ export function TaskItem({
                       </motion.div>
                     </button>
                   )}
-                </>
+                </div>
               )}
 
               {/* Spacer */}
@@ -320,7 +317,7 @@ export function TaskItem({
 
               {/* Action buttons */}
               {!isEditing && (
-                <>
+                <div className="flex items-center gap-1 flex-shrink-0">
                   {task.status === "todo" && onChangeStatus && (
                     <motion.button
                       onClick={() => onChangeStatus(task.id, "in_progress")}
@@ -368,7 +365,7 @@ export function TaskItem({
                   >
                     <X className="w-3.5 h-3.5" />
                   </motion.button>
-                </>
+                </div>
               )}
             </div>
           )}
@@ -380,11 +377,11 @@ export function TaskItem({
         {isExpanded && hasSubtasks && (
           <motion.div
             initial={{ opacity: 0, height: 0, marginTop: 0 }}
-            animate={{ opacity: 1, height: "auto", marginTop: 16 }}
+            animate={{ opacity: 1, height: "auto", marginTop: 8 }}
             exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            className="overflow-hidden pl-10 pr-2 border-l-2 border-white/5 ml-3"
+            className="overflow-hidden pl-4 pr-0 border-l-2 border-white/5 ml-2"
           >
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               {subTasks.map((subTask) => (
                 <div key={subTask.id} className="relative">
                   <TaskItem
@@ -393,6 +390,7 @@ export function TaskItem({
                     onChangeStatus={onChangeStatus}
                     onDelete={onDelete}
                     onEdit={onEdit}
+                    isSubTask
                   />
                   <div className="absolute left-[-26px] top-1/2 w-4 h-px bg-white/10" />
                 </div>
