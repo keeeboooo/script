@@ -43,7 +43,7 @@ export function useDisplayName(): UseDisplayNameResult {
   const updateDisplayName = async (name: string): Promise<{ error: string | null }> => {
     const result = DisplayNameSchema.safeParse({ displayName: name });
     if (!result.success) {
-      return { error: result.error.errors[0]?.message ?? "入力が無効です" };
+      return { error: result.error.issues[0]?.message ?? "入力が無効です" };
     }
 
     const trimmed = result.data.displayName;
