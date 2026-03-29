@@ -96,7 +96,7 @@ export function GoalInput({ onSubmit, isLoading }: GoalInputProps) {
           className={cn(
             "p-3 rounded-xl flex items-center justify-center transition-colors",
             goal.trim() && !isLoading
-              ? "bg-compass text-white hover:bg-compass-muted"
+              ? "bg-compass text-compass-foreground hover:bg-compass-muted"
               : "bg-secondary text-muted-foreground cursor-not-allowed"
           )}
         >

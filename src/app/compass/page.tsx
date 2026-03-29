@@ -72,7 +72,7 @@ export default function CompassPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...springTransition, delay: 0.05 }}
       >
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-compass via-compass-muted to-compass/50">
+        <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-compass via-compass-muted to-compass/50">
           Compass
         </h1>
         <p className="text-xs sm:text-sm text-muted-foreground max-w-xl mx-auto">
@@ -109,7 +109,7 @@ export default function CompassPage() {
         transition={{ delay: 0.2 }}
       >
         <div className="text-center space-y-2">
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+          <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight">
             Roadmap
           </h2>
           <p className="text-sm text-muted-foreground">

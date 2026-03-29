@@ -379,7 +379,7 @@ export function TaskItem({
             initial={{ opacity: 0, height: 0, marginTop: 0 }}
             animate={{ opacity: 1, height: "auto", marginTop: 8 }}
             exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            className="overflow-hidden pl-4 pr-0 border-l-2 border-white/5 ml-2"
+            className="overflow-hidden pl-4 pr-0 border-l-2 border-foreground/8 ml-2"
           >
             <div className="flex flex-col gap-1.5">
               {subTasks.map((subTask) => (
@@ -392,7 +392,7 @@ export function TaskItem({
                     onEdit={onEdit}
                     isSubTask
                   />
-                  <div className="absolute left-[-26px] top-1/2 w-4 h-px bg-white/10" />
+                  <div className="absolute left-[-26px] top-1/2 w-4 h-px bg-foreground/10" />
                 </div>
               ))}
             </div>
