@@ -177,7 +177,7 @@ export function PhilosophyChat({
           className={cn(
             "p-3 rounded-xl flex items-center justify-center transition-colors",
             input.trim() && !isChatLoading
-              ? "bg-compass text-white hover:bg-compass-muted"
+              ? "bg-compass text-compass-foreground hover:bg-compass-muted"
               : "bg-secondary text-muted-foreground cursor-not-allowed"
           )}
         >

@@ -26,7 +26,7 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center w-full max-w-3xl mx-auto space-y-4 pt-2 sm:pt-4">
       <div className="text-center space-y-1">
-        <h1 className="text-xl sm:text-2xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-white to-white/50">
+        <h1 className="font-display text-xl sm:text-2xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/50">
           Follow the Script.
         </h1>
         <p className="text-xs sm:text-sm text-muted-foreground max-w-xl mx-auto">

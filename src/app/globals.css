@@ -1,92 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Zen+Kaku+Gothic+New:wght@300;400;500;700;900&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-background: #050505;
-  --color-foreground: #fafafa;
-  --color-card: rgba(255, 255, 255, 0.03);
-  --color-card-foreground: #fafafa;
-  --color-popover: #0a0a0a;
-  --color-popover-foreground: #fafafa;
-  --color-primary: #fafafa;
-  --color-primary-foreground: #171717;
-  --color-secondary: #262626;
-  --color-secondary-foreground: #fafafa;
-  --color-muted: #171717;
-  --color-muted-foreground: #a3a3a3;
-  --color-accent: #171717;
-  --color-accent-foreground: #fafafa;
-  --color-destructive: #7f1d1d;
-  --color-destructive-foreground: #fafafa;
-  --color-border: rgba(255, 255, 255, 0.1);
-  --color-input: rgba(255, 255, 255, 0.1);
-  --color-ring: #d4d4d8;
+  /* ベース: クリーム / 古い原稿用紙 */
+  --color-background: #F5F0E8;
+  --color-foreground: #2C2C28;
+  --color-card: rgba(26, 26, 24, 0.04);
+  --color-card-foreground: #1A1A18;
+  --color-popover: #EDE8DF;
+  --color-popover-foreground: #1A1A18;
+  --color-primary: #2C2C28;
+  --color-primary-foreground: #F5F0E8;
+  --color-secondary: rgba(26, 26, 24, 0.07);
+  --color-secondary-foreground: #1A1A18;
+  --color-muted: rgba(26, 26, 24, 0.06);
+  --color-muted-foreground: #6B5E4E;
+  --color-accent: rgba(26, 26, 24, 0.07);
+  --color-accent-foreground: #1A1A18;
+  --color-destructive: #9B2335;
+  --color-destructive-foreground: #F5F0E8;
+  --color-border: rgba(26, 26, 24, 0.1);
+  --color-input: rgba(26, 26, 24, 0.08);
+  --color-ring: #1A1A18;
   --radius-lg: 0.75rem;
   --radius-md: calc(0.75rem - 2px);
   --radius-sm: calc(0.75rem - 4px);
 
-  /* Compass Mode: 静寂・内省的なインディゴ/バイオレットのアクセント */
-  --color-compass: #818cf8;
-  --color-compass-foreground: #fafafa;
-  --color-compass-muted: #6366f1;
-  --color-compass-subtle: rgba(129, 140, 248, 0.1);
-  --color-compass-border: rgba(129, 140, 248, 0.2);
+  /* Engine Mode: インクブラック。装飾しない */
+  --color-engine-accent: #2C2C28;
+
+  /* Compass Mode: 万年筆のインク — Deep Teal。思索・内省の静けさ */
+  --color-compass: #2D6A6A;
+  --color-compass-foreground: #F5F0E8;
+  --color-compass-muted: #235454;
+  --color-compass-subtle: rgba(45, 106, 106, 0.08);
+  --color-compass-border: rgba(45, 106, 106, 0.18);
 }
 
-/* 
-  Skill: Design System Integrity (Dark Mode First)
-  プレミアムで洗練された「Engine Mode」の世界観に合わせるため、
-  深みのある漆黒と、僅かな透過を利用した上品なダークモードをベースとします。
+/*
+  Skill: Design System Integrity
+  「脚本・人生のシナリオ」の世界観に合わせた、
+  クリームベース × インクブラック × Deep Teal のライトモードシステム。
+  AI感のある漆黒 + 紫グラデーションから脱却し、
+  紙・活字・万年筆の質感を纏う。
 */
 
 :root {
   background-color: var(--color-background);
   color: var(--color-foreground);
-  color-scheme: dark;
+  color-scheme: light;
 }
 
-/* 
+/*
   Glassmorphism Utilities
-  独自の「Glassmorphism（背景ぼかし）」や「Neumorphism」のスパイス
+  ライトモード向け: 白みがかった透過 + 柔らかい影
 */
 @utility glass {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: rgba(255, 255, 254, 0.6);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(26, 26, 24, 0.08);
+  box-shadow: 0 1px 3px rgba(26, 26, 24, 0.06);
 }
 
 @utility glass-hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 254, 0.8);
+  border-color: rgba(26, 26, 24, 0.14);
+  box-shadow: 0 2px 6px rgba(26, 26, 24, 0.08);
 }
 
-/* Compass Mode 専用グラスモーフィズム — 青み帯びた透過 */
+/* Compass Mode 専用グラスモーフィズム — Tealがかった透過 */
 @utility glass-compass {
-  background-color: rgba(99, 102, 241, 0.04);
+  background-color: rgba(45, 106, 106, 0.04);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(129, 140, 248, 0.1);
+  border: 1px solid rgba(45, 106, 106, 0.12);
+  box-shadow: 0 1px 3px rgba(45, 106, 106, 0.06);
 }
 
 @utility glass-compass-hover {
-  background-color: rgba(99, 102, 241, 0.08);
-  border-color: rgba(129, 140, 248, 0.2);
+  background-color: rgba(45, 106, 106, 0.08);
+  border-color: rgba(45, 106, 106, 0.2);
+  box-shadow: 0 2px 6px rgba(45, 106, 106, 0.1);
 }
 
 /* Chat bubble styles */
 @utility bubble-user {
-  background-color: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(26, 26, 24, 0.05);
+  border: 1px solid rgba(26, 26, 24, 0.08);
 }
 
 @utility bubble-assistant {
-  background-color: rgba(99, 102, 241, 0.06);
-  border: 1px solid rgba(129, 140, 248, 0.1);
+  background-color: rgba(45, 106, 106, 0.06);
+  border: 1px solid rgba(45, 106, 106, 0.12);
 }
 
 body {
-  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  font-family: 'Zen Kaku Gothic New', 'Hiragino Kaku Gothic ProN', sans-serif;
   margin: 0;
   min-height: 100vh;
-  /* 宇宙空間や高級感を感じさせる繊細なグラデーション背景 */
-  background: radial-gradient(circle at 50% 0%, #1a1a1a 0%, #050505 50%, #000000 100%);
+  /* 古い原稿用紙のような、中央からわずかに明るいクリームグラデーション */
+  background: radial-gradient(ellipse at 50% 0%, #FAF6EE 0%, #F5F0E8 50%, #EDE8DF 100%);
   background-attachment: fixed;
+}
+
+/* 見出し: 活版印刷の質感を纏う Shippori Mincho */
+@utility font-display {
+  font-family: 'Shippori Mincho', 'Hiragino Mincho ProN', serif;
 }

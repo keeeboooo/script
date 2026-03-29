@@ -167,7 +167,7 @@ function AddMilestoneForm({ onAdd, onCancel }: AddMilestoneFormProps) {
         <button
           type="submit"
           disabled={!period.trim() || !title.trim()}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-compass text-white disabled:opacity-40 disabled:cursor-not-allowed"
+          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-compass text-compass-foreground disabled:opacity-40 disabled:cursor-not-allowed"
         >
           追加
         </button>
