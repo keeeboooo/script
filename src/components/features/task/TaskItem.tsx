@@ -160,7 +160,7 @@ export function TaskItem({
                   stroke="currentColor"
                   strokeWidth="2.5"
                   strokeLinecap="round"
-                  initial={{ strokeDasharray: "50.265", strokeDashoffset: "50.265" }}
+                  initial={{ strokeDasharray: "50.265", strokeDashoffset: 50.265 }}
                   animate={{
                     strokeDashoffset: 50.265 - (50.265 * progressPercentage) / 100,
                   }}

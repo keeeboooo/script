@@ -78,6 +78,16 @@ export const RoadmapRequestSchema = z.object({
   timeframe: z.string().min(1),
 });
 
+// ─── User ─────────────────────────────────────────────────────────────────────
+
+export const DisplayNameSchema = z.object({
+  displayName: z
+    .string()
+    .trim()
+    .min(1, { message: "表示名を入力してください" })
+    .max(30, { message: "表示名は30文字以内で入力してください" }),
+});
+
 // ─── localStorage ─────────────────────────────────────────────────────────────
 
 export const StoredChatMessageSchema = z.object({
