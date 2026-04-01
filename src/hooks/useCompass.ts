@@ -35,6 +35,11 @@ export interface Milestone {
   description: string;
   keyActions: string[];
   isImported?: boolean;
+  // [The Thread - Phase 3設計メモ]
+  // マイルストーンをEngineモードのタスクにインポートした際、
+  // そのタスク群が「どのロードマップ・マイルストーン由来か」を追跡するため
+  // linkedRoadmapId / linkedMilestoneId をTaskに持たせる構造はすでに実装済み。
+  // 次フェーズでは逆方向（Task → Philosophy.values）の紐付けも実装予定。
 }
 
 export interface Roadmap {
