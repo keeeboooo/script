@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { useCompass } from "@/hooks/useCompass";
@@ -39,6 +39,13 @@ export default function CompassPage() {
   // 選択中のロードマップID（null = 一覧表示）
   const [selectedRoadmapId, setSelectedRoadmapId] = useState<string | null>(null);
   const selectedRoadmap = roadmaps.find((r) => r.id === selectedRoadmapId) ?? null;
+
+  // GoalInputへのref（PhilosophyCardのCTAからスクロールするため）
+  const goalInputRef = useRef<HTMLDivElement>(null);
+
+  const handleCreateRoadmapFromPhilosophy = useCallback(() => {
+    goalInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
 
   const handleGenerateRoadmap = useCallback(
     async (goal: string, timeframe: string) => {
@@ -99,7 +106,12 @@ export default function CompassPage() {
           />
         </div>
 
-        {philosophy && <PhilosophyCard philosophy={philosophy} />}
+        {philosophy && (
+          <PhilosophyCard
+            philosophy={philosophy}
+            onCreateRoadmap={handleCreateRoadmapFromPhilosophy}
+          />
+        )}
       </motion.section>
 
       {/* Section 2: Life Reverse-Engineering (ロードマップ) */}
@@ -118,7 +130,34 @@ export default function CompassPage() {
           </p>
         </div>
 
-        <GoalInput onSubmit={handleGenerateRoadmap} isLoading={isRoadmapLoading} />
+        {/* Philosophy summary banner (shown when philosophy exists) */}
+        <AnimatePresence>
+          {philosophy && (
+            <motion.div
+              key="philosophy-banner"
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={springTransition}
+              className="glass-compass rounded-xl px-4 py-3 border border-compass-border/40 flex items-start gap-3"
+            >
+              <span className="text-compass mt-0.5 shrink-0 text-sm">✦</span>
+              <p
+                className="text-sm text-compass/80 italic leading-relaxed line-clamp-2"
+                title={philosophy.lifeStatement}
+              >
+                &ldquo;{philosophy.lifeStatement}&rdquo;
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <GoalInput
+          ref={goalInputRef}
+          onSubmit={handleGenerateRoadmap}
+          isLoading={isRoadmapLoading}
+          hint={philosophy?.lifeStatement}
+        />
 
         {isRoadmapLoading && (
           <motion.div

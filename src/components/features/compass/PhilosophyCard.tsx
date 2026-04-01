@@ -1,12 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { BookOpen, Heart, Lightbulb, Compass } from "lucide-react";
+import { BookOpen, Heart, Lightbulb, Compass, ArrowRight } from "lucide-react";
 import type { Philosophy } from "@/hooks/useCompass";
 import { springTransition } from "@/lib/motion";
 
 interface PhilosophyCardProps {
   philosophy: Philosophy;
+  onCreateRoadmap?: () => void;
 }
 
 const cardVariants = {
@@ -24,7 +25,7 @@ const itemVariants = {
   show: { opacity: 1, x: 0, transition: springTransition },
 };
 
-export function PhilosophyCard({ philosophy }: PhilosophyCardProps) {
+export function PhilosophyCard({ philosophy, onCreateRoadmap }: PhilosophyCardProps) {
   return (
     <motion.div
       variants={cardVariants}
@@ -111,6 +112,27 @@ export function PhilosophyCard({ philosophy }: PhilosophyCardProps) {
           ))}
         </motion.ul>
       </div>
+
+      {/* CTA: Create Roadmap */}
+      {onCreateRoadmap && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springTransition, delay: 0.3 }}
+          className="pt-2 border-t border-compass-border/30"
+        >
+          <motion.button
+            onClick={onCreateRoadmap}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            transition={springTransition}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl glass-compass border border-compass-border/50 text-compass text-sm font-medium hover:glass-compass-hover transition-colors"
+          >
+            この哲学をもとにロードマップを作る
+            <ArrowRight className="w-4 h-4" />
+          </motion.button>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
