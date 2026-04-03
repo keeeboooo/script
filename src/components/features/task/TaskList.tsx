@@ -12,6 +12,7 @@ interface TaskListProps {
   onDeleteTask: (id: string) => void;
   onEditTask: (id: string, newTitle: string) => void;
   onReorderTasks: (fromIndex: number, toIndex: number) => void;
+  onEditBreakdown?: (taskId: string, instruction: string) => Promise<void>;
 }
 
 interface TaskWithIndex extends Task {
@@ -35,6 +36,7 @@ export function TaskList({
   onDeleteTask,
   onEditTask,
   onReorderTasks,
+  onEditBreakdown,
 }: TaskListProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -128,6 +130,7 @@ export function TaskList({
               onChangeStatus={onChangeTaskStatus}
               onDelete={onDeleteTask}
               onEdit={onEditTask}
+              onEditBreakdown={onEditBreakdown}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}

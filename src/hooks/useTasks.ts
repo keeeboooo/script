@@ -223,6 +223,78 @@ export function useTasks() {
     [tasks, supabase]
   );
 
+  // ─── Edit Breakdown (AI Editing) ──────────────────────────────────────────
+
+  const editBreakdown = useCallback(
+    async (parentId: string, instruction: string) => {
+      const parent = tasks.find((t) => t.id === parentId);
+      if (!parent) return;
+
+      const currentSubTasks = tasks.filter((t) => t.parentId === parentId);
+
+      const response = await fetch("/api/breakdown/edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          parentPrompt: parent.title,
+          currentTasks: currentSubTasks.map((t) => ({
+            title: t.title,
+            estimatedTime: t.estimatedTime,
+            actionLink: t.actionLink,
+          })),
+          instruction,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Edit breakdown API error: ${response.status}`);
+      }
+
+      const parsed = BreakdownResponseSchema.safeParse(await response.json());
+      if (!parsed.success) throw new Error("Failed to parse AI response");
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const oldSubTaskIds = currentSubTasks.map((t) => t.id);
+      if (oldSubTaskIds.length > 0) {
+        await supabase.from("tasks").delete().in("id", oldSubTaskIds);
+      }
+
+      const newSubTasks = parsed.data.tasks.map((t, i) => ({
+        id: uuidv4(),
+        user_id: user.id,
+        title: t.title,
+        status: "todo" as const,
+        estimated_time_label: t.estimatedTime ?? null,
+        action_link: t.actionLink ?? null,
+        parent_id: parentId,
+        position: i + 1,
+      }));
+
+      await supabase.from("tasks").insert(newSubTasks);
+
+      setTasks((prev) => {
+        const withoutOldSubtasks = prev.filter((t) => t.parentId !== parentId);
+        const newTaskItems: Task[] = newSubTasks.map((t) => ({
+          id: t.id,
+          title: t.title,
+          status: "todo" as TaskStatus,
+          estimatedTime: t.estimated_time_label ?? undefined,
+          actionLink: t.action_link ?? undefined,
+          parentId,
+        }));
+        const parentIndex = withoutOldSubtasks.findIndex((t) => t.id === parentId);
+        const result = [...withoutOldSubtasks];
+        result.splice(parentIndex + 1, 0, ...newTaskItems);
+        return result;
+      });
+    },
+    [tasks, supabase]
+  );
+
   // ─── Import from Roadmap (The Thread) ──────────────────────────────────────
 
   const importFromRoadmap = useCallback(
@@ -276,6 +348,7 @@ export function useTasks() {
     isBreakingDown: isLoading,
     completedCount,
     breakdownTask,
+    editBreakdown,
     toggleTask,
     changeTaskStatus,
     deleteTask,
