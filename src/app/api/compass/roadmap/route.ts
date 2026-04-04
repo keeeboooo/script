@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { goal, timeframe } = parsed.data;
+    const { goal, timeframe, philosophy } = parsed.data;
 
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     if (!apiKey) {
@@ -54,8 +54,12 @@ export async function POST(req: Request) {
       systemInstruction: systemPrompt,
     });
 
+    const philosophySection = philosophy
+      ? `\n\n## ユーザーの哲学（参考情報）\nゴールと関連する場合は、マイルストーンの内容や表現にさりげなく反映してください。無理に当てはめる必要はありません。\n人生の指針: ${philosophy.lifeStatement}\n大切にしている価値観:\n${philosophy.values.map((v) => `- ${v.name}: ${v.description}`).join("\n")}`
+      : "";
+
     const result = await model.generateContent(
-      `## ユーザーの目標\nゴール: ${goal.trim()}\n達成期間: ${timeframe.trim()}`
+      `## ユーザーの目標\nゴール: ${goal.trim()}\n達成期間: ${timeframe.trim()}${philosophySection}`
     );
     const text = result.response.text();
 

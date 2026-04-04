@@ -35,7 +35,7 @@ function LoginContent() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ ...springTransition, delay: 0.05 }}
       >
-        <h1 className="text-3xl sm:text-5xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-white to-white/50">
+        <h1 className="font-display text-3xl sm:text-5xl font-bold tracking-tighter bg-clip-text text-transparent bg-gradient-to-br from-foreground to-foreground/70">
           Follow the Script.
         </h1>
         <p className="text-base sm:text-lg text-muted-foreground max-w-md mx-auto">
