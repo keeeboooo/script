@@ -2,9 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Circle, Compass, X, GripVertical, Pencil, Play, Undo2 } from "lucide-react";
+import { CheckCircle2, Circle, Compass, X, GripVertical, Pencil, Play, Undo2, Wand2, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
+import { toast } from "sonner";
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'canceled';
 
@@ -28,6 +29,7 @@ interface TaskItemProps {
   onChangeStatus?: (id: string, status: TaskStatus) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string, newTitle: string) => void;
+  onEditBreakdown?: (taskId: string, instruction: string) => Promise<void>;
   index?: number;
   onDragStart?: (index: number) => void;
   onDragOver?: (index: number) => void;
@@ -47,6 +49,7 @@ export function TaskItem({
   onChangeStatus,
   onDelete,
   onEdit,
+  onEditBreakdown,
   index = 0,
   onDragStart,
   onDragOver,
@@ -56,7 +59,12 @@ export function TaskItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(task.title);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isAIEditOpen, setIsAIEditOpen] = useState(false);
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [isAIEditing, setIsAIEditing] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const aiInputRef = useRef<HTMLTextAreaElement>(null);
 
   const subTasks = task.subTasks ?? [];
   const hasSubtasks = subTasks.length > 0;
@@ -76,6 +84,37 @@ export function TaskItem({
       el.style.height = `${el.scrollHeight}px`;
     }
   }, [isEditing]);
+
+  useEffect(() => {
+    if (isAIEditOpen && aiInputRef.current) {
+      aiInputRef.current.focus();
+    }
+  }, [isAIEditOpen]);
+
+  const handleAIEditSubmit = async () => {
+    if (!aiInstruction.trim() || !onEditBreakdown || isAIEditing) return;
+    setIsAIEditing(true);
+    try {
+      await onEditBreakdown(task.id, aiInstruction.trim());
+      setIsAIEditOpen(false);
+      setAiInstruction("");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "AI修正に失敗しました");
+    } finally {
+      setIsAIEditing(false);
+    }
+  };
+
+  const handleAIEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      void handleAIEditSubmit();
+    }
+    if (e.key === "Escape") {
+      setIsAIEditOpen(false);
+      setAiInstruction("");
+    }
+  };
 
   const handleEditSubmit = () => {
     if (editValue.trim()) {
@@ -356,6 +395,24 @@ export function TaskItem({
                       <Pencil className="w-3.5 h-3.5" />
                     </motion.button>
                   )}
+                  {(hasSubtasks || isSubTask) && task.status !== "done" && onEditBreakdown && (
+                    <motion.button
+                      onClick={() => setIsAIEditOpen((prev) => !prev)}
+                      className={cn(
+                        "p-1.5 rounded-lg transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
+                        isAIEditOpen
+                          ? "text-foreground bg-secondary/50"
+                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                      )}
+                      whileTap={{ scale: 0.9 }}
+                      transition={springTransition}
+                      title="AIで修正"
+                      aria-label="AIでサブタスクを修正"
+                      aria-pressed={isAIEditOpen}
+                    >
+                      <Wand2 className="w-3.5 h-3.5" />
+                    </motion.button>
+                  )}
                   <motion.button
                     onClick={() => onDelete(task.id)}
                     className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive-foreground hover:bg-destructive/20 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
@@ -372,6 +429,53 @@ export function TaskItem({
         </div>
       </div>
 
+      {/* AI Edit Panel */}
+      <AnimatePresence>
+        {isAIEditOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: "auto", marginTop: 8 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={springTransition}
+            className="overflow-hidden"
+          >
+            <div className="flex gap-2 items-start pt-1 border-t border-foreground/10">
+              <Wand2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-2" />
+              <textarea
+                ref={aiInputRef}
+                value={aiInstruction}
+                onChange={(e) => setAiInstruction(e.target.value)}
+                onKeyDown={handleAIEditKeyDown}
+                disabled={isAIEditing}
+                placeholder="修正指示を入力（例：もっと具体的にして）"
+                rows={1}
+                className="flex-1 bg-transparent border-b border-foreground/20 outline-none text-sm py-1 resize-none overflow-hidden disabled:opacity-50"
+                style={{ minHeight: "2rem" }}
+                onInput={(e) => {
+                  const el = e.currentTarget;
+                  el.style.height = "auto";
+                  el.style.height = `${el.scrollHeight}px`;
+                }}
+              />
+              <motion.button
+                onClick={() => void handleAIEditSubmit()}
+                disabled={!aiInstruction.trim() || isAIEditing}
+                className="flex-shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed mt-0.5"
+                whileTap={{ scale: 0.9 }}
+                transition={springTransition}
+                aria-label="修正を送信"
+              >
+                {isAIEditing ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Subtasks Accordion */}
       <AnimatePresence>
         {isExpanded && hasSubtasks && (
@@ -379,7 +483,7 @@ export function TaskItem({
             initial={{ opacity: 0, height: 0, marginTop: 0 }}
             animate={{ opacity: 1, height: "auto", marginTop: 8 }}
             exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            className="overflow-hidden pl-4 pr-0 border-l-2 border-foreground/8 ml-2"
+            className="overflow-hidden pl-4 pr-0 border-l-2 border-foreground/10 ml-2"
           >
             <div className="flex flex-col gap-1.5">
               {subTasks.map((subTask) => (
@@ -390,6 +494,7 @@ export function TaskItem({
                     onChangeStatus={onChangeStatus}
                     onDelete={onDelete}
                     onEdit={onEdit}
+                    onEditBreakdown={onEditBreakdown}
                     isSubTask
                   />
                   <div className="absolute left-[-26px] top-1/2 w-4 h-px bg-foreground/10" />

@@ -12,6 +12,7 @@ export default function Home() {
   const {
     tasks,
     breakdownTask,
+    editBreakdown,
     toggleTask,
     changeTaskStatus,
     deleteTask,
@@ -68,6 +69,7 @@ export default function Home() {
               onDeleteTask={deleteTask}
               onEditTask={editTask}
               onReorderTasks={reorderTasks}
+              onEditBreakdown={editBreakdown}
             />
 
             {/* Bulk action bar */}

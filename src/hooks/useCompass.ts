@@ -699,6 +699,69 @@ export function useCompass() {
     [supabase]
   );
 
+  const editRoadmapWithAI = useCallback(
+    async (roadmapId: string, instruction: string) => {
+      // setRoadmaps のコールバック内で最新の roadmaps を参照することで
+      // roadmaps 配列全体への依存を避ける
+      let roadmap: Roadmap | undefined;
+      setRoadmaps((prev) => {
+        roadmap = prev.find((r) => r.id === roadmapId);
+        return prev;
+      });
+      if (!roadmap) return;
+
+      const response = await fetch("/api/compass/roadmap/edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          goal: roadmap.goal,
+          timeframe: roadmap.timeframe,
+          currentMilestones: roadmap.milestones.map((m) => ({
+            period: m.period,
+            title: m.title,
+            description: m.description,
+            keyActions: m.keyActions,
+          })),
+          instruction,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Edit roadmap API error: ${response.status}`);
+      }
+
+      const parsed = RoadmapResponseSchema.safeParse(await response.json());
+      if (!parsed.success) throw new Error("Failed to parse AI response");
+
+      // INSERT先にしてからDELETE（INSERT失敗時のデータ消失を防ぐ）
+      const { data: newMilestoneRows } = await supabase
+        .from("milestones")
+        .insert(
+          parsed.data.milestones.map((m, i) => ({
+            roadmap_id: roadmapId,
+            period: m.period,
+            title: m.title,
+            description: m.description,
+            key_actions: m.keyActions,
+            is_imported: false,
+            position: i,
+          }))
+        )
+        .select("*");
+
+      await supabase.from("milestones").delete().eq("roadmap_id", roadmapId).not("id", "in", `(${(newMilestoneRows ?? []).map((r) => r.id).join(",")})`);
+
+      const newMilestones = (newMilestoneRows ?? []).map(rowToMilestone);
+
+      setRoadmaps((prev) =>
+        prev.map((r) =>
+          r.id === roadmapId ? { ...r, milestones: newMilestones } : r
+        )
+      );
+    },
+    [supabase]
+  );
+
   return {
     // Philosophy list
     philosophies,
@@ -727,5 +790,6 @@ export function useCompass() {
     addMilestone,
     updateMilestone,
     deleteMilestone,
+    editRoadmapWithAI,
   };
 }

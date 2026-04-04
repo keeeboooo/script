@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ArrowRight, Check, Pencil, Trash2, Plus, X } from "lucide-react";
+import { MapPin, ArrowRight, Check, Pencil, Trash2, Plus, X, Wand2, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
+import { toast } from "sonner";
 import type { Milestone, Roadmap } from "@/hooks/useCompass";
 
 interface RoadmapTimelineProps {
@@ -14,6 +15,7 @@ interface RoadmapTimelineProps {
   onAddMilestone: (milestone: Omit<Milestone, "id">) => void;
   onUpdateMilestone: (milestoneId: string, patch: Partial<Pick<Milestone, "period" | "title" | "description" | "keyActions">>) => void;
   onDeleteMilestone: (milestoneId: string) => void;
+  onEditRoadmapWithAI?: (roadmapId: string, instruction: string) => Promise<void>;
 }
 
 const listVariants = {
@@ -184,8 +186,37 @@ export function RoadmapTimeline({
   onAddMilestone,
   onUpdateMilestone,
   onDeleteMilestone,
+  onEditRoadmapWithAI,
 }: RoadmapTimelineProps) {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isAIEditOpen, setIsAIEditOpen] = useState(false);
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [isAIEditing, setIsAIEditing] = useState(false);
+
+  const handleAIEditSubmit = async () => {
+    if (!aiInstruction.trim() || !onEditRoadmapWithAI || isAIEditing) return;
+    setIsAIEditing(true);
+    try {
+      await onEditRoadmapWithAI(roadmap.id, aiInstruction.trim());
+      setIsAIEditOpen(false);
+      setAiInstruction("");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "AI修正に失敗しました");
+    } finally {
+      setIsAIEditing(false);
+    }
+  };
+
+  const handleAIEditKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      void handleAIEditSubmit();
+    }
+    if (e.key === "Escape") {
+      setIsAIEditOpen(false);
+      setAiInstruction("");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -214,7 +245,67 @@ export function RoadmapTimeline({
             inputClassName="text-sm"
           />
         </div>
+        {onEditRoadmapWithAI && (
+          <motion.button
+            onClick={() => setIsAIEditOpen((prev) => !prev)}
+            className={cn(
+              "flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
+              isAIEditOpen
+                ? "bg-compass/20 text-compass"
+                : "text-muted-foreground hover:text-compass hover:bg-compass-subtle border border-compass-border/40"
+            )}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
+            transition={springTransition}
+            aria-label="AIでロードマップを修正"
+            aria-pressed={isAIEditOpen}
+          >
+            <Wand2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">AIで修正</span>
+          </motion.button>
+        )}
       </div>
+
+      {/* AI Edit Panel */}
+      <AnimatePresence>
+        {isAIEditOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={springTransition}
+            className="overflow-hidden"
+          >
+            <div className="glass-compass rounded-xl p-3 flex gap-2 items-start">
+              <Wand2 className="w-3.5 h-3.5 text-compass flex-shrink-0 mt-1.5" />
+              <textarea
+                autoFocus
+                value={aiInstruction}
+                onChange={(e) => setAiInstruction(e.target.value)}
+                onKeyDown={handleAIEditKeyDown}
+                disabled={isAIEditing}
+                placeholder="修正指示を入力（例：フェーズ3にモバイルアプリ対応を追加して）"
+                rows={2}
+                className="flex-1 bg-transparent outline-none text-sm resize-none disabled:opacity-50 placeholder:text-muted-foreground/50"
+              />
+              <motion.button
+                onClick={() => void handleAIEditSubmit()}
+                disabled={!aiInstruction.trim() || isAIEditing}
+                className="flex-shrink-0 p-1.5 rounded-lg text-compass hover:bg-compass/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed mt-0.5"
+                whileTap={{ scale: 0.9 }}
+                transition={springTransition}
+                aria-label="修正を送信"
+              >
+                {isAIEditing ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Timeline */}
       <motion.div

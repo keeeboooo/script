@@ -43,6 +43,7 @@ export default function CompassPage() {
     addMilestone,
     updateMilestone,
     deleteMilestone,
+    editRoadmapWithAI,
   } = useCompass();
 
   const { importFromRoadmap } = useTasks();
@@ -317,6 +318,9 @@ export default function CompassPage() {
                 }
                 onDeleteMilestone={(milestoneId) =>
                   deleteMilestone(selectedRoadmap.id, milestoneId)
+                }
+                onEditRoadmapWithAI={(roadmapId, instruction) =>
+                  editRoadmapWithAI(roadmapId, instruction)
                 }
               />
             </motion.div>
