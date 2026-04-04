@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, Circle, Compass, X, GripVertical, Pencil, Play, Undo2, Wand2, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
+import { toast } from "sonner";
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'canceled';
 
@@ -61,6 +62,7 @@ export function TaskItem({
   const [isAIEditOpen, setIsAIEditOpen] = useState(false);
   const [aiInstruction, setAiInstruction] = useState("");
   const [isAIEditing, setIsAIEditing] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const aiInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -96,15 +98,15 @@ export function TaskItem({
       await onEditBreakdown(task.id, aiInstruction.trim());
       setIsAIEditOpen(false);
       setAiInstruction("");
-    } catch {
-      // エラーは呼び出し元でハンドル済み
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "AI修正に失敗しました");
     } finally {
       setIsAIEditing(false);
     }
   };
 
   const handleAIEditKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       void handleAIEditSubmit();
     }
@@ -393,7 +395,7 @@ export function TaskItem({
                       <Pencil className="w-3.5 h-3.5" />
                     </motion.button>
                   )}
-                  {hasSubtasks && task.status !== "done" && task.status !== "canceled" && onEditBreakdown && (
+                  {(hasSubtasks || isSubTask) && task.status !== "done" && onEditBreakdown && (
                     <motion.button
                       onClick={() => setIsAIEditOpen((prev) => !prev)}
                       className={cn(
@@ -437,7 +439,7 @@ export function TaskItem({
             transition={springTransition}
             className="overflow-hidden"
           >
-            <div className="flex gap-2 items-start pt-1 border-t border-foreground/8">
+            <div className="flex gap-2 items-start pt-1 border-t border-foreground/10">
               <Wand2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-2" />
               <textarea
                 ref={aiInputRef}
@@ -481,7 +483,7 @@ export function TaskItem({
             initial={{ opacity: 0, height: 0, marginTop: 0 }}
             animate={{ opacity: 1, height: "auto", marginTop: 8 }}
             exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            className="overflow-hidden pl-4 pr-0 border-l-2 border-foreground/8 ml-2"
+            className="overflow-hidden pl-4 pr-0 border-l-2 border-foreground/10 ml-2"
           >
             <div className="flex flex-col gap-1.5">
               {subTasks.map((subTask) => (
@@ -492,6 +494,7 @@ export function TaskItem({
                     onChangeStatus={onChangeStatus}
                     onDelete={onDelete}
                     onEdit={onEdit}
+                    onEditBreakdown={onEditBreakdown}
                     isSubTask
                   />
                   <div className="absolute left-[-26px] top-1/2 w-4 h-px bg-foreground/10" />

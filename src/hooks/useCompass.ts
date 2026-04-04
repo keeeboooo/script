@@ -701,7 +701,13 @@ export function useCompass() {
 
   const editRoadmapWithAI = useCallback(
     async (roadmapId: string, instruction: string) => {
-      const roadmap = roadmaps.find((r) => r.id === roadmapId);
+      // setRoadmaps のコールバック内で最新の roadmaps を参照することで
+      // roadmaps 配列全体への依存を避ける
+      let roadmap: Roadmap | undefined;
+      setRoadmaps((prev) => {
+        roadmap = prev.find((r) => r.id === roadmapId);
+        return prev;
+      });
       if (!roadmap) return;
 
       const response = await fetch("/api/compass/roadmap/edit", {
@@ -727,8 +733,7 @@ export function useCompass() {
       const parsed = RoadmapResponseSchema.safeParse(await response.json());
       if (!parsed.success) throw new Error("Failed to parse AI response");
 
-      await supabase.from("milestones").delete().eq("roadmap_id", roadmapId);
-
+      // INSERT先にしてからDELETE（INSERT失敗時のデータ消失を防ぐ）
       const { data: newMilestoneRows } = await supabase
         .from("milestones")
         .insert(
@@ -744,6 +749,8 @@ export function useCompass() {
         )
         .select("*");
 
+      await supabase.from("milestones").delete().eq("roadmap_id", roadmapId).not("id", "in", `(${(newMilestoneRows ?? []).map((r) => r.id).join(",")})`);
+
       const newMilestones = (newMilestoneRows ?? []).map(rowToMilestone);
 
       setRoadmaps((prev) =>
@@ -752,7 +759,7 @@ export function useCompass() {
         )
       );
     },
-    [roadmaps, supabase]
+    [supabase]
   );
 
   return {

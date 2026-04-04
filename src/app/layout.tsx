@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { HeaderNav } from "@/components/ui/HeaderNav";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "Script",
@@ -36,6 +37,7 @@ export default function RootLayout({
         <main className="max-w-3xl mx-auto px-4 sm:px-8 pt-14 pb-8 min-h-screen">
           {children}
         </main>
+        <Toaster position="bottom-center" richColors />
       </body>
     </html>
   );

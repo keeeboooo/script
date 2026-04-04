@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, ArrowRight, Check, Pencil, Trash2, Plus, X, Wand2, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
+import { toast } from "sonner";
 import type { Milestone, Roadmap } from "@/hooks/useCompass";
 
 interface RoadmapTimelineProps {
@@ -199,15 +200,15 @@ export function RoadmapTimeline({
       await onEditRoadmapWithAI(roadmap.id, aiInstruction.trim());
       setIsAIEditOpen(false);
       setAiInstruction("");
-    } catch {
-      // エラーは呼び出し元でハンドル済み
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "AI修正に失敗しました");
     } finally {
       setIsAIEditing(false);
     }
   };
 
   const handleAIEditKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       void handleAIEditSubmit();
     }

@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Task, TaskStatus } from "@/components/features/task/TaskItem";
 import { v4 as uuidv4 } from "uuid";
-import { BreakdownResponseSchema } from "@/lib/schemas";
+import { BreakdownResponseSchema, BreakdownTaskSchema } from "@/lib/schemas";
+import { z } from "zod";
+
+const SingleEditResponseSchema = z.object({ task: BreakdownTaskSchema });
 import { createClient } from "@/lib/supabase/client";
 
 export function useTasks() {
@@ -226,17 +229,69 @@ export function useTasks() {
   // ─── Edit Breakdown (AI Editing) ──────────────────────────────────────────
 
   const editBreakdown = useCallback(
-    async (parentId: string, instruction: string) => {
-      const parent = tasks.find((t) => t.id === parentId);
-      if (!parent) return;
+    async (taskId: string, instruction: string) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
 
-      const currentSubTasks = tasks.filter((t) => t.parentId === parentId);
+      // サブタスク単体編集: parentId がある = サブタスク自身のID
+      if (task.parentId) {
+        const parent = tasks.find((t) => t.id === task.parentId);
+        if (!parent) return;
+
+        const siblingSubTasks = tasks.filter((t) => t.parentId === task.parentId);
+
+        const response = await fetch("/api/breakdown/edit/single", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            parentPrompt: parent.title,
+            targetTask: { title: task.title, estimatedTime: task.estimatedTime, actionLink: task.actionLink },
+            allCurrentTasks: siblingSubTasks.map((t) => ({
+              title: t.title,
+              estimatedTime: t.estimatedTime,
+              actionLink: t.actionLink,
+              isTarget: t.id === taskId,
+            })),
+            instruction,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Edit breakdown API error: ${response.status}`);
+        }
+
+        const parsed = SingleEditResponseSchema.safeParse(await response.json());
+        if (!parsed.success) throw new Error("Failed to parse AI response");
+
+        const updated = parsed.data.task;
+
+        await supabase
+          .from("tasks")
+          .update({
+            title: updated.title,
+            estimated_time_label: updated.estimatedTime ?? null,
+            action_link: updated.actionLink ?? null,
+          })
+          .eq("id", taskId);
+
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId
+              ? { ...t, title: updated.title, estimatedTime: updated.estimatedTime, actionLink: updated.actionLink }
+              : t
+          )
+        );
+        return;
+      }
+
+      // 全サブタスク置換（親タスクのAI編集）
+      const currentSubTasks = tasks.filter((t) => t.parentId === taskId);
 
       const response = await fetch("/api/breakdown/edit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          parentPrompt: parent.title,
+          parentPrompt: task.title,
           currentTasks: currentSubTasks.map((t) => ({
             title: t.title,
             estimatedTime: t.estimatedTime,
@@ -259,9 +314,6 @@ export function useTasks() {
       if (!user) throw new Error("Not authenticated");
 
       const oldSubTaskIds = currentSubTasks.map((t) => t.id);
-      if (oldSubTaskIds.length > 0) {
-        await supabase.from("tasks").delete().in("id", oldSubTaskIds);
-      }
 
       const newSubTasks = parsed.data.tasks.map((t, i) => ({
         id: uuidv4(),
@@ -270,28 +322,33 @@ export function useTasks() {
         status: "todo" as const,
         estimated_time_label: t.estimatedTime ?? null,
         action_link: t.actionLink ?? null,
-        parent_id: parentId,
+        parent_id: taskId,
         position: i + 1,
       }));
 
+      // INSERT先にしてからDELETE（データ消失リスクを回避）
       await supabase.from("tasks").insert(newSubTasks);
+      if (oldSubTaskIds.length > 0) {
+        await supabase.from("tasks").delete().in("id", oldSubTaskIds);
+      }
 
       setTasks((prev) => {
-        const withoutOldSubtasks = prev.filter((t) => t.parentId !== parentId);
+        const withoutOldSubtasks = prev.filter((t) => t.parentId !== taskId);
         const newTaskItems: Task[] = newSubTasks.map((t) => ({
           id: t.id,
           title: t.title,
           status: "todo" as TaskStatus,
           estimatedTime: t.estimated_time_label ?? undefined,
           actionLink: t.action_link ?? undefined,
-          parentId,
+          parentId: taskId,
         }));
-        const parentIndex = withoutOldSubtasks.findIndex((t) => t.id === parentId);
+        const parentIndex = withoutOldSubtasks.findIndex((t) => t.id === taskId);
         const result = [...withoutOldSubtasks];
         result.splice(parentIndex + 1, 0, ...newTaskItems);
         return result;
       });
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [tasks, supabase]
   );
 
