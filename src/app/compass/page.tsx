@@ -2,11 +2,12 @@
 
 import { useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Plus } from "lucide-react";
 import { useCompass } from "@/hooks/useCompass";
 import { useTasks } from "@/hooks/useTasks";
 import { PhilosophyChat } from "@/components/features/compass/PhilosophyChat";
 import { PhilosophyCard } from "@/components/features/compass/PhilosophyCard";
+import { PhilosophyList } from "@/components/features/compass/PhilosophyList";
 import { GoalInput } from "@/components/features/compass/GoalInput";
 import { RoadmapTimeline } from "@/components/features/compass/RoadmapTimeline";
 import { RoadmapList } from "@/components/features/compass/RoadmapList";
@@ -15,13 +16,24 @@ import { springTransition } from "@/lib/motion";
 
 export default function CompassPage() {
   const {
+    // Philosophy list
+    philosophies,
+    setActivePhilosophy,
+    deletePhilosophy,
+    // Philosophy session
+    editingPhilosophyId,
+    startNewPhilosophySession,
+    openPhilosophySession,
+    closePhilosophySession,
+    // Philosophy generation
+    generatePhilosophy,
+    isPhilosophyLoading,
+    // Chat
     messages,
     sendMessage,
     isChatLoading,
     resetChat,
-    philosophy,
-    generatePhilosophy,
-    isPhilosophyLoading,
+    // Roadmap
     roadmaps,
     generateRoadmap,
     isRoadmapLoading,
@@ -36,11 +48,19 @@ export default function CompassPage() {
 
   const { importFromRoadmap } = useTasks();
 
-  // 選択中のロードマップID（null = 一覧表示）
+  // 哲学セクションの表示状態
+  const isInSession = editingPhilosophyId !== null;
+
+  // 編集中の哲学オブジェクト（新規の場合はnull）
+  const editingPhilosophy =
+    editingPhilosophyId !== null && editingPhilosophyId !== "new"
+      ? (philosophies.find((p) => p.id === editingPhilosophyId) ?? null)
+      : null;
+
+  // ロードマップ
   const [selectedRoadmapId, setSelectedRoadmapId] = useState<string | null>(null);
   const selectedRoadmap = roadmaps.find((r) => r.id === selectedRoadmapId) ?? null;
 
-  // GoalInputへのref（PhilosophyCardのCTAからスクロールするため）
   const goalInputRef = useRef<HTMLDivElement>(null);
 
   const handleCreateRoadmapFromPhilosophy = useCallback(() => {
@@ -71,6 +91,8 @@ export default function CompassPage() {
     [deleteRoadmap, selectedRoadmapId]
   );
 
+  const activePhilosophy = philosophies.find((p) => p.isActive) ?? null;
+
   return (
     <div className="flex flex-col w-full max-w-3xl mx-auto space-y-8 pt-4">
       {/* Hero */}
@@ -88,33 +110,119 @@ export default function CompassPage() {
         </p>
       </motion.div>
 
-      {/* Section 1: Value Extraction (対話 + Philosophy) */}
+      {/* Section 1: Philosophy */}
       <motion.section
-        className="space-y-8"
+        className="space-y-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.15 }}
       >
-        <div className="glass-compass rounded-2xl p-6">
-          <PhilosophyChat
-            messages={messages}
-            onSendMessage={sendMessage}
-            onGeneratePhilosophy={generatePhilosophy}
-            onResetChat={resetChat}
-            isChatLoading={isChatLoading}
-            isPhilosophyLoading={isPhilosophyLoading}
-          />
-        </div>
+        <AnimatePresence mode="wait">
+          {isInSession ? (
+            // ─── セッションビュー ───────────────────────────────────────────
+            <motion.div
+              key="session"
+              initial={{ opacity: 0, x: 24 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -24 }}
+              transition={springTransition}
+              className="space-y-6"
+            >
+              <button
+                onClick={closePhilosophySession}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="哲学一覧に戻る"
+              >
+                ← 一覧に戻る
+              </button>
 
-        {philosophy && (
-          <PhilosophyCard
-            philosophy={philosophy}
-            onCreateRoadmap={handleCreateRoadmapFromPhilosophy}
-          />
-        )}
+              <div className="glass-compass rounded-2xl p-6">
+                <PhilosophyChat
+                  messages={messages}
+                  onSendMessage={sendMessage}
+                  onGeneratePhilosophy={generatePhilosophy}
+                  onResetChat={resetChat}
+                  isChatLoading={isChatLoading}
+                  isPhilosophyLoading={isPhilosophyLoading}
+                />
+              </div>
+
+              {editingPhilosophy && (
+                <PhilosophyCard
+                  philosophy={editingPhilosophy}
+                  onCreateRoadmap={handleCreateRoadmapFromPhilosophy}
+                  onSetActive={
+                    !editingPhilosophy.isActive
+                      ? () => setActivePhilosophy(editingPhilosophy.id)
+                      : undefined
+                  }
+                  onDelete={() => deletePhilosophy(editingPhilosophy.id)}
+                />
+              )}
+            </motion.div>
+          ) : (
+            // ─── 一覧ビュー ─────────────────────────────────────────────────
+            <motion.div
+              key="list"
+              initial={{ opacity: 0, x: -24 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 24 }}
+              transition={springTransition}
+              className="space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <h2 className="font-display text-lg font-bold tracking-tight">My Philosophy</h2>
+                  <p className="text-xs text-muted-foreground">
+                    対話から生まれた、あなた自身の哲学
+                  </p>
+                </div>
+                <motion.button
+                  onClick={startNewPhilosophySession}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={springTransition}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl glass-compass border border-compass-border/50 text-compass text-sm font-medium hover:glass-compass-hover transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  新しい哲学
+                </motion.button>
+              </div>
+
+              {philosophies.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="glass-compass rounded-2xl p-10 text-center space-y-3"
+                >
+                  <p className="text-muted-foreground text-sm">
+                    まだ哲学がありません
+                  </p>
+                  <motion.button
+                    onClick={startNewPhilosophySession}
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={springTransition}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-compass-subtle text-compass text-sm font-medium border border-compass-border/50 hover:bg-compass/20 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    はじめての哲学を作る
+                  </motion.button>
+                </motion.div>
+              ) : (
+                <PhilosophyList
+                  philosophies={philosophies}
+                  onOpen={openPhilosophySession}
+                  onDelete={deletePhilosophy}
+                  onSetActive={setActivePhilosophy}
+                />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.section>
 
-      {/* Section 2: Life Reverse-Engineering (ロードマップ) */}
+      {/* Section 2: Roadmap */}
       <motion.section
         className="space-y-6"
         initial={{ opacity: 0 }}
@@ -130,9 +238,9 @@ export default function CompassPage() {
           </p>
         </div>
 
-        {/* Philosophy summary banner (shown when philosophy exists) */}
+        {/* Active philosophy banner */}
         <AnimatePresence>
-          {philosophy && (
+          {activePhilosophy && (
             <motion.div
               key="philosophy-banner"
               initial={{ opacity: 0, y: -8 }}
@@ -144,9 +252,9 @@ export default function CompassPage() {
               <span className="text-compass mt-0.5 shrink-0 text-sm">✦</span>
               <p
                 className="text-sm text-compass/80 italic leading-relaxed line-clamp-2"
-                title={philosophy.lifeStatement}
+                title={activePhilosophy.lifeStatement}
               >
-                &ldquo;{philosophy.lifeStatement}&rdquo;
+                &ldquo;{activePhilosophy.lifeStatement}&rdquo;
               </p>
             </motion.div>
           )}
@@ -156,7 +264,6 @@ export default function CompassPage() {
           ref={goalInputRef}
           onSubmit={handleGenerateRoadmap}
           isLoading={isRoadmapLoading}
-          hint={philosophy?.lifeStatement}
         />
 
         {isRoadmapLoading && (
@@ -184,7 +291,6 @@ export default function CompassPage() {
 
         <AnimatePresence mode="wait">
           {!isRoadmapLoading && selectedRoadmap ? (
-            // 詳細ビュー
             <motion.div
               key={`detail-${selectedRoadmap.id}`}
               initial={{ opacity: 0, x: 24 }}
@@ -219,7 +325,6 @@ export default function CompassPage() {
               />
             </motion.div>
           ) : !isRoadmapLoading && roadmaps.length > 0 ? (
-            // 一覧ビュー
             <motion.div
               key="list"
               initial={{ opacity: 0, x: -24 }}

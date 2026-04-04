@@ -66,6 +66,13 @@ export const PhilosophySchema = z.object({
   lifeStatement: z.string(),
 });
 
+export const PhilosophyWithMetaSchema = PhilosophySchema.extend({
+  id: z.string().uuid(),
+  isActive: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 // ─── Compass: Roadmap ─────────────────────────────────────────────────────────
 
 export const MilestoneSchema = z.object({
@@ -84,6 +91,10 @@ export const RoadmapResponseSchema = z.object({
 export const RoadmapRequestSchema = z.object({
   goal: z.string().min(1),
   timeframe: z.string().min(1),
+  philosophy: z.object({
+    lifeStatement: z.string(),
+    values: z.array(z.object({ name: z.string(), description: z.string() })),
+  }).optional(),
 });
 
 // ─── User ─────────────────────────────────────────────────────────────────────
