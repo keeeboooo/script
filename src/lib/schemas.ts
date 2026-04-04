@@ -15,6 +15,14 @@ export const RawTaskSchema = z.object({
   linkedGoal: z.string().optional(),
   linkedRoadmapId: z.string().optional(),
   linkedMilestoneId: z.string().optional(),
+  // [The Thread - Phase 3設計メモ]
+  // タスクとCompassの哲学・価値観を紐付けるフィールド。
+  // Philosophy.values[n].name をIDとして使うか、別途 philosophyValueId を持つかは要検討。
+  // 候補: linkedPhilosophyValueId?: string
+  //   → タスクが「どの価値観に基づいているか」を可視化し、
+  //     Engineモードで「なぜこの作業をしているか」を一瞬で想起できるようにする。
+  // UI案: タスク行の右端に小さな羅針盤アイコン（🧭）を表示し、
+  //        ホバー/タップで紐付き哲学・価値観をポップオーバーで表示。
 });
 
 export const BreakdownTaskSchema = z.object({
@@ -58,6 +66,13 @@ export const PhilosophySchema = z.object({
   lifeStatement: z.string(),
 });
 
+export const PhilosophyWithMetaSchema = PhilosophySchema.extend({
+  id: z.string().uuid(),
+  isActive: z.boolean(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 // ─── Compass: Roadmap ─────────────────────────────────────────────────────────
 
 export const MilestoneSchema = z.object({
@@ -76,6 +91,10 @@ export const RoadmapResponseSchema = z.object({
 export const RoadmapRequestSchema = z.object({
   goal: z.string().min(1),
   timeframe: z.string().min(1),
+  philosophy: z.object({
+    lifeStatement: z.string(),
+    values: z.array(z.object({ name: z.string(), description: z.string() })),
+  }).optional(),
 });
 
 // ─── User ─────────────────────────────────────────────────────────────────────
