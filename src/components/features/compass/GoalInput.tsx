@@ -2,7 +2,7 @@
 
 import { useState, forwardRef } from "react";
 import { motion } from "framer-motion";
-import { Target, Sparkles } from "lucide-react";
+import { Target, Sparkles, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
 
@@ -60,15 +60,20 @@ export const GoalInput = forwardRef<HTMLDivElement, GoalInputProps>(
 
           {/* Hint from philosophy */}
           {hint && (
-            <motion.p
+            <motion.div
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={springTransition}
-              className="text-sm text-compass/60 italic px-2"
-              title={hint}
+              className="flex items-start gap-1.5 px-2"
             >
-              💡 あなたの哲学: &ldquo;<span className="line-clamp-2">{hint}</span>&rdquo;
-            </motion.p>
+              <Lightbulb className="w-3.5 h-3.5 text-compass/60 mt-0.5 shrink-0" />
+              <p
+                className="text-sm text-compass/60 italic line-clamp-2"
+                title={hint}
+              >
+                あなたの哲学: &ldquo;{hint}&rdquo;
+              </p>
+            </motion.div>
           )}
 
           {/* Timeframe selector + submit */}

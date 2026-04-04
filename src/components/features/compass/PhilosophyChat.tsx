@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Heart, MessageCircle, RotateCcw, BookOpen } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
 import type { ChatMessage } from "@/hooks/useCompass";
@@ -14,6 +15,11 @@ interface PhilosophyChatProps {
   onResetChat: () => void;
   isChatLoading: boolean;
   isPhilosophyLoading: boolean;
+}
+
+// **text** の前後に半角スペースがない場合でも太字になるよう補完する
+function normalizeMarkdown(content: string): string {
+  return content.replace(/\*\*(.+?)\*\*/g, (_, inner) => ` **${inner}** `);
 }
 
 const messageVariants = {
@@ -32,7 +38,7 @@ export function PhilosophyChat({
 }: PhilosophyChatProps) {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -46,6 +52,15 @@ export function PhilosophyChat({
     if (!input.trim() || isChatLoading) return;
     onSendMessage(input);
     setInput("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      if (!input.trim() || isChatLoading) return;
+      onSendMessage(input);
+      setInput("");
+    }
   };
 
   const canGeneratePhilosophy = messages.length >= 4 && !isChatLoading;
@@ -122,13 +137,30 @@ export function PhilosophyChat({
             >
               <div
                 className={cn(
-                  "max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap",
+                  "max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed",
                   message.role === "user"
-                    ? "bubble-user rounded-br-md"
+                    ? "bubble-user rounded-br-md whitespace-pre-wrap"
                     : "bubble-assistant rounded-bl-md"
                 )}
               >
-                {message.content}
+                {message.role === "user" ? (
+                  message.content
+                ) : (
+                  <ReactMarkdown
+                    components={{
+
+                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                      em: ({ children }) => <em className="italic">{children}</em>,
+                      ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
+                      li: ({ children }) => <li>{children}</li>,
+                      code: ({ children }) => <code className="bg-foreground/10 rounded px-1 py-0.5 text-xs font-mono">{children}</code>,
+                    }}
+                  >
+                    {normalizeMarkdown(message.content)}
+                  </ReactMarkdown>
+                )}
               </div>
             </motion.div>
           ))}
@@ -153,17 +185,18 @@ export function PhilosophyChat({
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="flex items-center gap-2">
-        <div className="flex-1 flex items-center glass-compass rounded-2xl p-2 focus-within:glass-compass-hover transition-colors">
-          <input
+      <form onSubmit={handleSubmit} className="flex items-end gap-2">
+        <div className="flex-1 flex items-end glass-compass rounded-2xl p-2 focus-within:glass-compass-hover transition-colors">
+          <textarea
             ref={inputRef}
-            type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="メッセージを入力..."
             aria-label="AIコーチへのメッセージを入力"
             aria-busy={isChatLoading}
-            className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 px-3 py-2 text-sm"
+            rows={1}
+            className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 px-3 py-2 text-sm resize-none max-h-32 overflow-y-auto"
             disabled={isChatLoading}
           />
         </div>
