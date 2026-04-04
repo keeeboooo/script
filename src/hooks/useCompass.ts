@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   PhilosophySchema,
+  PhilosophyWithMetaSchema,
   RoadmapResponseSchema,
   ChatResponseSchema,
 } from "@/lib/schemas";
@@ -28,6 +29,13 @@ export interface Philosophy {
   lifeStatement: string;
 }
 
+export interface PhilosophyWithMeta extends Philosophy {
+  id: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Milestone {
   id: string;
   period: string;
@@ -35,11 +43,6 @@ export interface Milestone {
   description: string;
   keyActions: string[];
   isImported?: boolean;
-  // [The Thread - Phase 3設計メモ]
-  // マイルストーンをEngineモードのタスクにインポートした際、
-  // そのタスク群が「どのロードマップ・マイルストーン由来か」を追跡するため
-  // linkedRoadmapId / linkedMilestoneId をTaskに持たせる構造はすでに実装済み。
-  // 次フェーズでは逆方向（Task → Philosophy.values）の紐付けも実装予定。
 }
 
 export interface Roadmap {
@@ -50,6 +53,10 @@ export interface Roadmap {
   timeframe: string;
   milestones: Milestone[];
 }
+
+// 新規セッションを示すセンチネル値
+const NEW_SESSION = "new" as const;
+type EditingPhilosophyId = string | typeof NEW_SESSION | null;
 
 // ─── DB row 変換ヘルパー ────────────────────────────────────────────────────
 
@@ -92,17 +99,55 @@ function rowToRoadmap(
   };
 }
 
+function rowToPhilosophyWithMeta(
+  row: {
+    id: string;
+    created_at: string;
+    updated_at: string;
+    title: string;
+    life_statement: string;
+    beliefs: string[];
+    action_principles: string[];
+    is_active: boolean;
+    philosophy_values: { name: string; description: string; origin: string; position: number }[];
+  }
+): PhilosophyWithMeta | null {
+  const parsed = PhilosophyWithMetaSchema.safeParse({
+    id: row.id,
+    title: row.title,
+    lifeStatement: row.life_statement,
+    beliefs: row.beliefs,
+    actionPrinciples: row.action_principles,
+    isActive: row.is_active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    values: row.philosophy_values
+      .sort((a, b) => a.position - b.position)
+      .map(({ name, description, origin }) => ({ name, description, origin })),
+  });
+  return parsed.success ? parsed.data : null;
+}
+
 // ─── Hook ──────────────────────────────────────────────────────────────────
 
 export function useCompass() {
   const supabase = useRef(createClient()).current;
 
+  // Philosophy
+  const [philosophies, setPhilosophies] = useState<PhilosophyWithMeta[]>([]);
+  const [editingPhilosophyId, setEditingPhilosophyId] = useState<EditingPhilosophyId>(null);
+  const [isPhilosophyLoading, setIsPhilosophyLoading] = useState(false);
+
+  // Chat (スコープ: editingPhilosophyId のセッション)
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const messagesRef = useRef<ChatMessage[]>([]);
-  const [philosophy, setPhilosophy] = useState<Philosophy | null>(null);
-  const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [isPhilosophyLoading, setIsPhilosophyLoading] = useState(false);
+
+  // 新規セッション中に philosophy_id なしで送ったメッセージをバッファ
+  const pendingMessagesRef = useRef<ChatMessage[]>([]);
+
+  // Roadmap
+  const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
   const [isRoadmapLoading, setIsRoadmapLoading] = useState(false);
 
   // ─── 初期データ取得 ───────────────────────────────────────────────────────
@@ -114,47 +159,30 @@ export function useCompass() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [msgResult, philResult, roadmapResult] = await Promise.all([
-        supabase
-          .from("compass_messages")
-          .select("*")
-          .order("created_at", { ascending: true }),
+      const [philResult, roadmapResult] = await Promise.all([
         supabase
           .from("philosophies")
           .select("*, philosophy_values(*)")
           .eq("user_id", user.id)
-          .maybeSingle(),
+          .order("created_at", { ascending: false }),
         supabase
           .from("roadmaps")
           .select("*, milestones(*)")
           .order("created_at", { ascending: false }),
       ]);
 
-      const { data: msgRows } = msgResult;
-      const { data: philRow } = philResult;
+      const { data: philRows } = philResult;
       const { data: roadmapRows } = roadmapResult;
 
-      if (msgRows) {
-        const msgs: ChatMessage[] = msgRows.map((r) => ({
-          id: r.id,
-          role: r.role as "user" | "assistant",
-          content: r.content,
-        }));
-        setMessages(msgs);
-        messagesRef.current = msgs;
-      }
-
-      if (philRow) {
-        const parsed = PhilosophySchema.safeParse({
-          title: philRow.title,
-          lifeStatement: philRow.life_statement,
-          beliefs: philRow.beliefs,
-          actionPrinciples: philRow.action_principles,
-          values: (philRow.philosophy_values as { name: string; description: string; origin: string; position: number }[])
-            .sort((a, b) => a.position - b.position)
-            .map(({ name, description, origin }) => ({ name, description, origin })),
-        });
-        if (parsed.success) setPhilosophy(parsed.data);
+      if (philRows) {
+        const mapped = philRows
+          .map((r) =>
+            rowToPhilosophyWithMeta(
+              r as Parameters<typeof rowToPhilosophyWithMeta>[0]
+            )
+          )
+          .filter((p): p is PhilosophyWithMeta => p !== null);
+        setPhilosophies(mapped);
       }
 
       if (roadmapRows) {
@@ -170,6 +198,48 @@ export function useCompass() {
 
     fetchAll();
   }, [supabase]);
+
+  // ─── Philosophy セッション管理 ─────────────────────────────────────────────
+
+  const startNewPhilosophySession = useCallback(() => {
+    setEditingPhilosophyId(NEW_SESSION);
+    messagesRef.current = [];
+    pendingMessagesRef.current = [];
+    setMessages([]);
+  }, []);
+
+  const openPhilosophySession = useCallback(
+    async (philosophyId: string) => {
+      setEditingPhilosophyId(philosophyId);
+      messagesRef.current = [];
+      pendingMessagesRef.current = [];
+      setMessages([]);
+
+      const { data: msgRows } = await supabase
+        .from("compass_messages")
+        .select("*")
+        .eq("philosophy_id", philosophyId)
+        .order("created_at", { ascending: true });
+
+      if (msgRows) {
+        const msgs: ChatMessage[] = msgRows.map((r) => ({
+          id: r.id,
+          role: r.role as "user" | "assistant",
+          content: r.content,
+        }));
+        messagesRef.current = msgs;
+        setMessages(msgs);
+      }
+    },
+    [supabase]
+  );
+
+  const closePhilosophySession = useCallback(() => {
+    setEditingPhilosophyId(null);
+    messagesRef.current = [];
+    pendingMessagesRef.current = [];
+    setMessages([]);
+  }, []);
 
   // ─── Chat ─────────────────────────────────────────────────────────────────
 
@@ -190,13 +260,18 @@ export function useCompass() {
       messagesRef.current = updated;
       setMessages(updated);
 
-      // DB に保存
-      await supabase.from("compass_messages").insert({
-        id: userMessage.id,
-        user_id: user.id,
-        role: "user",
-        content,
-      });
+      if (editingPhilosophyId === NEW_SESSION) {
+        // 新規セッション: philosophy_id が決まるまでバッファに積む
+        pendingMessagesRef.current = [...pendingMessagesRef.current, userMessage];
+      } else if (editingPhilosophyId !== null) {
+        await supabase.from("compass_messages").insert({
+          id: userMessage.id,
+          user_id: user.id,
+          philosophy_id: editingPhilosophyId,
+          role: "user",
+          content,
+        });
+      }
 
       setIsChatLoading(true);
       try {
@@ -221,12 +296,17 @@ export function useCompass() {
           messagesRef.current = withAssistant;
           setMessages(withAssistant);
 
-          await supabase.from("compass_messages").insert({
-            id: assistantMessage.id,
-            user_id: user.id,
-            role: "assistant",
-            content: assistantMessage.content,
-          });
+          if (editingPhilosophyId === NEW_SESSION) {
+            pendingMessagesRef.current = [...pendingMessagesRef.current, assistantMessage];
+          } else if (editingPhilosophyId !== null) {
+            await supabase.from("compass_messages").insert({
+              id: assistantMessage.id,
+              user_id: user.id,
+              philosophy_id: editingPhilosophyId,
+              role: "assistant",
+              content: assistantMessage.content,
+            });
+          }
         }
       } catch (error) {
         console.error("Failed to send chat message:", error);
@@ -234,7 +314,7 @@ export function useCompass() {
         setIsChatLoading(false);
       }
     },
-    [supabase]
+    [supabase, editingPhilosophyId]
   );
 
   const resetChat = useCallback(async () => {
@@ -244,11 +324,18 @@ export function useCompass() {
     if (!user) return;
 
     messagesRef.current = [];
+    pendingMessagesRef.current = [];
     setMessages([]);
-    await supabase.from("compass_messages").delete().eq("user_id", user.id);
-  }, [supabase]);
 
-  // ─── Philosophy ──────────────────────────────────────────────────────────
+    if (editingPhilosophyId !== null && editingPhilosophyId !== NEW_SESSION) {
+      await supabase
+        .from("compass_messages")
+        .delete()
+        .eq("philosophy_id", editingPhilosophyId);
+    }
+  }, [supabase, editingPhilosophyId]);
+
+  // ─── Philosophy 生成・更新 ────────────────────────────────────────────────
 
   const generatePhilosophy = useCallback(async () => {
     const currentMessages = messagesRef.current;
@@ -275,28 +362,9 @@ export function useCompass() {
       if (!parsed.success) return;
 
       const p = parsed.data;
-      setPhilosophy(p);
 
-      // upsert philosophy
-      const { data: existing } = await supabase
-        .from("philosophies")
-        .select("id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      let philosophyId: string;
-
-      if (existing) {
-        philosophyId = existing.id;
-        await supabase.from("philosophies").update({
-          title: p.title,
-          life_statement: p.lifeStatement,
-          beliefs: p.beliefs,
-          action_principles: p.actionPrinciples,
-        }).eq("id", philosophyId);
-
-        await supabase.from("philosophy_values").delete().eq("philosophy_id", philosophyId);
-      } else {
+      if (editingPhilosophyId === NEW_SESSION) {
+        // ─── 新規作成 ───────────────────────────────────────────────────────
         const { data: newPhil } = await supabase
           .from("philosophies")
           .insert({
@@ -305,22 +373,88 @@ export function useCompass() {
             life_statement: p.lifeStatement,
             beliefs: p.beliefs,
             action_principles: p.actionPrinciples,
+            is_active: false,
           })
-          .select("id")
+          .select("id, created_at, updated_at")
           .single();
-        if (!newPhil) throw new Error("Philosophy の保存に失敗しました");
-        philosophyId = newPhil.id;
-      }
 
-      if (p.values.length > 0) {
-        await supabase.from("philosophy_values").insert(
-          p.values.map((v, i) => ({
-            philosophy_id: philosophyId,
-            name: v.name,
-            description: v.description,
-            origin: v.origin,
-            position: i,
-          }))
+        if (!newPhil) throw new Error("Philosophy の保存に失敗しました");
+
+        const philosophyId: string = newPhil.id;
+
+        // バッファしていたメッセージを一括保存
+        if (pendingMessagesRef.current.length > 0) {
+          await supabase.from("compass_messages").insert(
+            pendingMessagesRef.current.map((m) => ({
+              id: m.id,
+              user_id: user.id,
+              philosophy_id: philosophyId,
+              role: m.role,
+              content: m.content,
+            }))
+          );
+          pendingMessagesRef.current = [];
+        }
+
+        if (p.values.length > 0) {
+          await supabase.from("philosophy_values").insert(
+            p.values.map((v, i) => ({
+              philosophy_id: philosophyId,
+              name: v.name,
+              description: v.description,
+              origin: v.origin,
+              position: i,
+            }))
+          );
+        }
+
+        const newPhilosophy: PhilosophyWithMeta = {
+          ...p,
+          id: philosophyId,
+          isActive: false,
+          createdAt: newPhil.created_at,
+          updatedAt: newPhil.updated_at,
+        };
+
+        setPhilosophies((prev) => [newPhilosophy, ...prev]);
+        setEditingPhilosophyId(philosophyId);
+      } else if (editingPhilosophyId !== null) {
+        // ─── 既存を更新 ─────────────────────────────────────────────────────
+        const philosophyId = editingPhilosophyId;
+
+        await supabase
+          .from("philosophies")
+          .update({
+            title: p.title,
+            life_statement: p.lifeStatement,
+            beliefs: p.beliefs,
+            action_principles: p.actionPrinciples,
+          })
+          .eq("id", philosophyId);
+
+        await supabase
+          .from("philosophy_values")
+          .delete()
+          .eq("philosophy_id", philosophyId);
+
+        if (p.values.length > 0) {
+          await supabase.from("philosophy_values").insert(
+            p.values.map((v, i) => ({
+              philosophy_id: philosophyId,
+              name: v.name,
+              description: v.description,
+              origin: v.origin,
+              position: i,
+            }))
+          );
+        }
+
+        setPhilosophies((prev) =>
+          prev.map((existing) =>
+            existing.id === philosophyId
+              ? { ...existing, ...p, updatedAt: new Date().toISOString() }
+              : existing
+          )
         );
       }
     } catch (error) {
@@ -328,7 +462,48 @@ export function useCompass() {
     } finally {
       setIsPhilosophyLoading(false);
     }
-  }, [supabase]);
+  }, [supabase, editingPhilosophyId]);
+
+  // ─── Philosophy アクティブ切り替え ────────────────────────────────────────
+
+  const setActivePhilosophy = useCallback(
+    async (philosophyId: string) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 現在アクティブなものを解除してから新しいものをアクティブに
+      await supabase
+        .from("philosophies")
+        .update({ is_active: false })
+        .eq("user_id", user.id)
+        .eq("is_active", true);
+
+      await supabase
+        .from("philosophies")
+        .update({ is_active: true })
+        .eq("id", philosophyId);
+
+      setPhilosophies((prev) =>
+        prev.map((p) => ({ ...p, isActive: p.id === philosophyId }))
+      );
+    },
+    [supabase]
+  );
+
+  // ─── Philosophy 削除 ─────────────────────────────────────────────────────
+
+  const deletePhilosophy = useCallback(
+    async (philosophyId: string) => {
+      setPhilosophies((prev) => prev.filter((p) => p.id !== philosophyId));
+      if (editingPhilosophyId === philosophyId) {
+        closePhilosophySession();
+      }
+      await supabase.from("philosophies").delete().eq("id", philosophyId);
+    },
+    [supabase, editingPhilosophyId, closePhilosophySession]
+  );
 
   // ─── Roadmap ─────────────────────────────────────────────────────────────
 
@@ -341,10 +516,21 @@ export function useCompass() {
         } = await supabase.auth.getUser();
         if (!user) return null;
 
+        const activePhilosophy = philosophies.find((p) => p.isActive);
+        const philosophyPayload = activePhilosophy
+          ? {
+              lifeStatement: activePhilosophy.lifeStatement,
+              values: activePhilosophy.values.map(({ name, description }) => ({
+                name,
+                description,
+              })),
+            }
+          : undefined;
+
         const response = await fetch("/api/compass/roadmap", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ goal, timeframe }),
+          body: JSON.stringify({ goal, timeframe, philosophy: philosophyPayload }),
         });
 
         if (!response.ok) throw new Error(`Roadmap API error: ${response.status}`);
@@ -380,7 +566,6 @@ export function useCompass() {
           .select("*");
 
         const milestones = (milestoneRows ?? []).map(rowToMilestone);
-
         const newRoadmap = rowToRoadmap(roadmapRow, milestones);
         setRoadmaps((prev) => [newRoadmap, ...prev]);
         return newRoadmap.id;
@@ -391,7 +576,7 @@ export function useCompass() {
         setIsRoadmapLoading(false);
       }
     },
-    [supabase]
+    [supabase, philosophies]
   );
 
   const markMilestoneImported = useCallback(
@@ -489,7 +674,7 @@ export function useCompass() {
         )
       );
 
-      const dbPatch: Record<string, unknown> = {};
+      const dbPatch: Record<string, string | string[]> = {};
       if (patch.period !== undefined) dbPatch.period = patch.period;
       if (patch.title !== undefined) dbPatch.title = patch.title;
       if (patch.description !== undefined) dbPatch.description = patch.description;
@@ -515,15 +700,23 @@ export function useCompass() {
   );
 
   return {
+    // Philosophy list
+    philosophies,
+    setActivePhilosophy,
+    deletePhilosophy,
+    // Philosophy session
+    editingPhilosophyId,
+    startNewPhilosophySession,
+    openPhilosophySession,
+    closePhilosophySession,
+    // Philosophy generation
+    generatePhilosophy,
+    isPhilosophyLoading,
     // Chat
     messages,
     sendMessage,
     isChatLoading,
     resetChat,
-    // Philosophy
-    philosophy,
-    generatePhilosophy,
-    isPhilosophyLoading,
     // Roadmap
     roadmaps,
     generateRoadmap,
