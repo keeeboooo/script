@@ -15,6 +15,9 @@ export const RawTaskSchema = z.object({
   linkedGoal: z.string().optional(),
   linkedRoadmapId: z.string().optional(),
   linkedMilestoneId: z.string().optional(),
+  scheduledDate: z.string().optional(),
+  scheduledTime: z.string().optional(),
+  firstStep: z.string().optional(),
   // [The Thread - Phase 3設計メモ]
   // タスクとCompassの哲学・価値観を紐付けるフィールド。
   // Philosophy.values[n].name をIDとして使うか、別途 philosophyValueId を持つかは要検討。
@@ -33,6 +36,7 @@ export const BreakdownTaskSchema = z.object({
 
 export const BreakdownResponseSchema = z.object({
   tasks: z.array(BreakdownTaskSchema),
+  firstStep: z.string().optional(),
 });
 
 // ─── Compass: Chat ────────────────────────────────────────────────────────────

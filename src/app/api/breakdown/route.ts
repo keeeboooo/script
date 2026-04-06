@@ -25,13 +25,19 @@ Respond STRICTLY with a JSON object matching this schema, without markdown forma
       "estimatedTime": "15分",
       "actionLink": "https://example.com/useful-link"
     }
-  ]
+  ],
+  "firstStep": "今すぐできる最小の着手行動（1文で、動詞で始める）"
 }
 
 Instructions for actionLink:
 - If a task involves buying something, provide an Amazon or specific store search link.
 - If it involves research, provide a Google specific search link or Wikipedia.
 - ONLY provide an actionLink if it's genuinely useful for immediate execution. Otherwise, optionally omit it.
+
+Instructions for firstStep:
+- Identify the single smallest action that would get the user started right now.
+- It should take less than 5 minutes and create momentum.
+- Write it as a concrete verb phrase in Japanese (e.g. "レシピ動画を1本だけ開いて見てみる").
 `;
 
 export async function POST(req: Request) {

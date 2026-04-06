@@ -29,6 +29,9 @@ export function useTasks() {
       linked_goal: string | null;
       linked_roadmap_id: string | null;
       linked_milestone_id: string | null;
+      scheduled_date: string | null;
+      scheduled_time: string | null;
+      first_step: string | null;
       position: number;
     }): Task => ({
       id: row.id,
@@ -40,6 +43,9 @@ export function useTasks() {
       linkedGoal: row.linked_goal ?? undefined,
       linkedRoadmapId: row.linked_roadmap_id ?? undefined,
       linkedMilestoneId: row.linked_milestone_id ?? undefined,
+      scheduledDate: row.scheduled_date ?? undefined,
+      scheduledTime: row.scheduled_time ?? undefined,
+      firstStep: row.first_step ?? undefined,
     }),
     []
   );
@@ -145,10 +151,46 @@ export function useTasks() {
     await supabase.from("tasks").delete().in("id", ids);
   }, [tasks, supabase]);
 
+  // ─── Scheduling ────────────────────────────────────────────────────────────
+
+  const scheduleTask = useCallback(
+    async (id: string, date: string, time?: string) => {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? { ...t, scheduledDate: date, scheduledTime: time ?? undefined }
+            : t
+        )
+      );
+      await supabase
+        .from("tasks")
+        .update({ scheduled_date: date, scheduled_time: time ?? null })
+        .eq("id", id);
+    },
+    [supabase]
+  );
+
+  const unscheduleTask = useCallback(
+    async (id: string) => {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? { ...t, scheduledDate: undefined, scheduledTime: undefined }
+            : t
+        )
+      );
+      await supabase
+        .from("tasks")
+        .update({ scheduled_date: null, scheduled_time: null })
+        .eq("id", id);
+    },
+    [supabase]
+  );
+
   // ─── Magic Breakdown ────────────────────────────────────────────────────────
 
   const breakdownTask = useCallback(
-    async (prompt: string) => {
+    async (prompt: string): Promise<string | null> => {
       setIsLoading(true);
 
       try {
@@ -174,6 +216,7 @@ export function useTasks() {
         }
 
         const parentId = uuidv4();
+        const firstStep = parsed.data.firstStep;
 
         // 親タスクを挿入
         await supabase.from("tasks").insert({
@@ -182,6 +225,7 @@ export function useTasks() {
           title: prompt,
           status: "todo",
           position: 0,
+          first_step: firstStep ?? null,
         });
 
         // 既存タスクの position をずらす
@@ -206,6 +250,7 @@ export function useTasks() {
           id: parentId,
           title: prompt,
           status: "todo",
+          firstStep,
         };
         const newTasks: Task[] = subTasks.map((t) => ({
           id: t.id,
@@ -217,8 +262,10 @@ export function useTasks() {
         }));
 
         setTasks((prev) => [parentTask, ...newTasks, ...prev]);
+        return parentId;
       } catch (error) {
         console.error("Failed to breakdown task:", error);
+        return null;
       } finally {
         setIsLoading(false);
       }
@@ -399,11 +446,34 @@ export function useTasks() {
     [tasks]
   );
 
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, []);
+
+  const todayTasks = useMemo(
+    () => tasks.filter((t) => t.scheduledDate === todayStr),
+    [tasks, todayStr]
+  );
+
+  const scheduledTasks = useMemo(
+    () => tasks.filter((t) => t.scheduledDate && t.scheduledDate > todayStr),
+    [tasks, todayStr]
+  );
+
+  const somedayTasks = useMemo(
+    () => tasks.filter((t) => !t.scheduledDate && !t.parentId),
+    [tasks]
+  );
+
   return {
     tasks,
     isLoading: isLoading || isFetching,
     isBreakingDown: isLoading,
     completedCount,
+    todayTasks,
+    scheduledTasks,
+    somedayTasks,
     breakdownTask,
     editBreakdown,
     toggleTask,
@@ -413,5 +483,7 @@ export function useTasks() {
     reorderTasks,
     clearCompleted,
     importFromRoadmap,
+    scheduleTask,
+    unscheduleTask,
   };
 }

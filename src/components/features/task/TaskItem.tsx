@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Circle, Compass, X, GripVertical, Pencil, Play, Undo2, Wand2, Send, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, Compass, X, GripVertical, Pencil, Play, Undo2, Wand2, Send, Loader2, CalendarDays } from "lucide-react";
+import { SchedulingPicker } from "./SchedulingPicker";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
 import { toast } from "sonner";
@@ -21,6 +22,9 @@ export interface Task {
   linkedRoadmapId?: string;
   linkedMilestoneId?: string;
   parentId?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  firstStep?: string;
 }
 
 interface TaskItemProps {
@@ -30,11 +34,39 @@ interface TaskItemProps {
   onDelete: (id: string) => void;
   onEdit: (id: string, newTitle: string) => void;
   onEditBreakdown?: (taskId: string, instruction: string) => Promise<void>;
+  onScheduleTask?: (id: string, date: string, time?: string) => void;
+  onUnscheduleTask?: (id: string) => void;
   index?: number;
   onDragStart?: (index: number) => void;
   onDragOver?: (index: number) => void;
   onDragEnd?: () => void;
   isSubTask?: boolean;
+}
+
+function formatScheduleBadge(date: string, time?: string): string {
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
+
+  let dateLabel: string;
+  if (date === todayStr) dateLabel = "今日";
+  else if (date === tomorrowStr) dateLabel = "明日";
+  else {
+    const d = new Date(date);
+    dateLabel = `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+
+  if (!time) return dateLabel;
+
+  const [h] = time.split(":").map(Number);
+  let timeLabel: string;
+  if (h !== undefined && h < 10) timeLabel = "朝";
+  else if (h !== undefined && h < 15) timeLabel = "昼";
+  else timeLabel = "夜";
+
+  return `${dateLabel} ${timeLabel}`;
 }
 
 const itemVariants = {
@@ -50,6 +82,8 @@ export function TaskItem({
   onDelete,
   onEdit,
   onEditBreakdown,
+  onScheduleTask,
+  onUnscheduleTask,
   index = 0,
   onDragStart,
   onDragOver,
@@ -63,6 +97,7 @@ export function TaskItem({
   const [aiInstruction, setAiInstruction] = useState("");
   const [isAIEditing, setIsAIEditing] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [isSchedulePickerOpen, setIsSchedulePickerOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const aiInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -320,6 +355,18 @@ export function TaskItem({
                       <span className="opacity-70">↗</span> Link
                     </a>
                   )}
+                  {task.scheduledDate && !isSubTask && (
+                    <motion.button
+                      onClick={() => onUnscheduleTask?.(task.id)}
+                      className="flex items-center gap-1 bg-secondary/50 px-2 py-0.5 rounded-md text-xs text-muted-foreground hover:bg-destructive/20 hover:text-destructive-foreground transition-colors"
+                      whileTap={{ scale: 0.95 }}
+                      transition={springTransition}
+                      title="スケジュールを解除"
+                    >
+                      <CalendarDays className="w-3 h-3 opacity-70" />
+                      {formatScheduleBadge(task.scheduledDate, task.scheduledTime)}
+                    </motion.button>
+                  )}
 
                   {hasSubtasks && (
                     <button
@@ -413,6 +460,24 @@ export function TaskItem({
                       <Wand2 className="w-3.5 h-3.5" />
                     </motion.button>
                   )}
+                  {!isSubTask && task.status !== "done" && onScheduleTask && (
+                    <motion.button
+                      onClick={() => setIsSchedulePickerOpen((prev) => !prev)}
+                      className={cn(
+                        "p-1.5 rounded-lg transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
+                        isSchedulePickerOpen
+                          ? "text-foreground bg-secondary/50"
+                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                      )}
+                      whileTap={{ scale: 0.9 }}
+                      transition={springTransition}
+                      title="スケジュール"
+                      aria-label="スケジュールを設定"
+                      aria-pressed={isSchedulePickerOpen}
+                    >
+                      <CalendarDays className="w-3.5 h-3.5" />
+                    </motion.button>
+                  )}
                   <motion.button
                     onClick={() => onDelete(task.id)}
                     className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive-foreground hover:bg-destructive/20 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
@@ -476,6 +541,50 @@ export function TaskItem({
         )}
       </AnimatePresence>
 
+      {/* Scheduling Picker Panel */}
+      <AnimatePresence>
+        {isSchedulePickerOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: "auto", marginTop: 8 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={springTransition}
+            className="overflow-hidden"
+          >
+            <SchedulingPicker
+              defaultDate={task.scheduledDate}
+              defaultTime={task.scheduledTime}
+              onSchedule={(date, time) => {
+                onScheduleTask?.(task.id, date, time);
+                setIsSchedulePickerOpen(false);
+              }}
+              onSkip={() => setIsSchedulePickerOpen(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* First Step hint */}
+      <AnimatePresence>
+        {task.firstStep && task.status !== "done" && task.status !== "canceled" && !isSubTask && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: "auto", marginTop: 6 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={springTransition}
+            className="overflow-hidden"
+          >
+            <div className="flex items-start gap-2 px-2 py-1.5 rounded-xl bg-secondary/30 border border-foreground/5">
+              <span className="text-xs text-muted-foreground mt-0.5 flex-shrink-0">⚡</span>
+              <p className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground/70">まず: </span>
+                {task.firstStep}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Subtasks Accordion */}
       <AnimatePresence>
         {isExpanded && hasSubtasks && (
@@ -495,6 +604,8 @@ export function TaskItem({
                     onDelete={onDelete}
                     onEdit={onEdit}
                     onEditBreakdown={onEditBreakdown}
+                    onScheduleTask={onScheduleTask}
+                    onUnscheduleTask={onUnscheduleTask}
                     isSubTask
                   />
                   <div className="absolute left-[-26px] top-1/2 w-4 h-px bg-foreground/10" />
