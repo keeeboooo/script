@@ -205,14 +205,14 @@ export function useTasks() {
         }
 
         const parsed = BreakdownResponseSchema.safeParse(await response.json());
-        if (!parsed.success) return;
+        if (!parsed.success) return null;
 
         const {
           data: { user },
         } = await supabase.auth.getUser();
         if (!user) {
           console.warn("breakdownTask: user not authenticated");
-          return;
+          return null;
         }
 
         const parentId = uuidv4();
