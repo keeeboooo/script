@@ -6,6 +6,7 @@ import { CheckCircle2, Circle, Compass, X, GripVertical, Pencil, Play, Undo2, Wa
 import { SchedulingPicker } from "./SchedulingPicker";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
+import { formatScheduleBadge } from "@/lib/date";
 import { toast } from "sonner";
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'canceled';
@@ -43,31 +44,6 @@ interface TaskItemProps {
   isSubTask?: boolean;
 }
 
-function formatScheduleBadge(date: string, time?: string): string {
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`;
-
-  let dateLabel: string;
-  if (date === todayStr) dateLabel = "今日";
-  else if (date === tomorrowStr) dateLabel = "明日";
-  else {
-    const d = new Date(date);
-    dateLabel = `${d.getMonth() + 1}/${d.getDate()}`;
-  }
-
-  if (!time) return dateLabel;
-
-  const [h] = time.split(":").map(Number);
-  let timeLabel: string;
-  if (h !== undefined && h < 10) timeLabel = "朝";
-  else if (h !== undefined && h < 15) timeLabel = "昼";
-  else timeLabel = "夜";
-
-  return `${dateLabel} ${timeLabel}`;
-}
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -604,8 +580,6 @@ export function TaskItem({
                     onDelete={onDelete}
                     onEdit={onEdit}
                     onEditBreakdown={onEditBreakdown}
-                    onScheduleTask={onScheduleTask}
-                    onUnscheduleTask={onUnscheduleTask}
                     isSubTask
                   />
                   <div className="absolute left-[-26px] top-1/2 w-4 h-px bg-foreground/10" />

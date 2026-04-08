@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Clock, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
+import { getTodayStr, getTomorrowStr, getWeekendStr, formatDateLabel } from "@/lib/date";
 
 interface SchedulingPickerProps {
   onSchedule: (date: string, time?: string) => void;
@@ -21,35 +22,6 @@ const TIME_SLOT_VALUES: Record<Exclude<TimeSlot, "指定">, string> = {
   昼: "12:00",
   夜: "20:00",
 };
-
-function getTodayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function getTomorrowStr(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function getWeekendStr(): string {
-  const d = new Date();
-  const day = d.getDay();
-  // 次の土曜日
-  const daysUntilSat = day === 6 ? 7 : (6 - day);
-  d.setDate(d.getDate() + daysUntilSat);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function formatDateLabel(dateStr: string): string {
-  const today = getTodayStr();
-  const tomorrow = getTomorrowStr();
-  if (dateStr === today) return "今日";
-  if (dateStr === tomorrow) return "明日";
-  const d = new Date(dateStr);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
-}
 
 export function SchedulingPicker({
   onSchedule,
