@@ -6,6 +6,7 @@ import { Task, TaskItem, TaskStatus } from "./TaskItem";
 import { SchedulingPicker } from "./SchedulingPicker";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
+import { getTodayStr } from "@/lib/date";
 
 interface TaskListProps {
   tasks: Task[];
@@ -74,10 +75,7 @@ export function TaskList({
     [tasks]
   );
 
-  const todayStr = useMemo(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }, []);
+  const todayStr = useMemo(() => getTodayStr(), []);
 
   const processedTasks: TaskWithIndex[] = useMemo(() => {
     if (viewMode === "project") {
@@ -215,7 +213,7 @@ export function TaskList({
             Projects
           </button>
           <button
-            onClick={() => setViewMode("today")}
+            onClick={() => { setViewMode("today"); onDismissSchedulingPrompt?.(); }}
             aria-pressed={viewMode === "today"}
             className={cn(
               "px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300",
@@ -245,6 +243,7 @@ export function TaskList({
                 onDismissSchedulingPrompt?.();
               }}
               onSkip={() => onDismissSchedulingPrompt?.()}
+              taskTitle={tasks.find((t) => t.id === newlyBreakdownTaskId)?.title}
             />
           </motion.div>
         )}

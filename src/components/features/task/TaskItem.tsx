@@ -44,7 +44,6 @@ interface TaskItemProps {
   isSubTask?: boolean;
 }
 
-
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: springTransition },
@@ -331,7 +330,7 @@ export function TaskItem({
                       <span className="opacity-70">↗</span> Link
                     </a>
                   )}
-                  {task.scheduledDate && !isSubTask && (
+                  {task.scheduledDate && (
                     <motion.button
                       onClick={() => onUnscheduleTask?.(task.id)}
                       className="flex items-center gap-1 bg-secondary/50 px-2 py-0.5 rounded-md text-xs text-muted-foreground hover:bg-destructive/20 hover:text-destructive-foreground transition-colors"
@@ -436,7 +435,7 @@ export function TaskItem({
                       <Wand2 className="w-3.5 h-3.5" />
                     </motion.button>
                   )}
-                  {!isSubTask && task.status !== "done" && onScheduleTask && (
+                  {task.status !== "done" && onScheduleTask && (
                     <motion.button
                       onClick={() => setIsSchedulePickerOpen((prev) => !prev)}
                       className={cn(
@@ -580,6 +579,8 @@ export function TaskItem({
                     onDelete={onDelete}
                     onEdit={onEdit}
                     onEditBreakdown={onEditBreakdown}
+                    onScheduleTask={onScheduleTask}
+                    onUnscheduleTask={onUnscheduleTask}
                     isSubTask
                   />
                   <div className="absolute left-[-26px] top-1/2 w-4 h-px bg-foreground/10" />

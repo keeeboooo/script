@@ -26,18 +26,20 @@ export function formatDateLabel(dateStr: string): string {
   const tomorrow = getTomorrowStr();
   if (dateStr === today) return "今日";
   if (dateStr === tomorrow) return "明日";
-  const d = new Date(dateStr);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
+  // "YYYY-MM-DD" を直接パース（new Date("YYYY-MM-DD") はUTC解釈でJSTで日付がずれる）
+  const [, m, dd] = dateStr.split("-").map(Number);
+  return `${m}/${dd}`;
 }
 
 export function formatScheduleBadge(date: string, time?: string): string {
   const dateLabel = formatDateLabel(date);
   if (!time) return dateLabel;
 
+  // TIME_SLOT_VALUES と対応させた逆引き
   const [h] = time.split(":").map(Number);
   let timeLabel: string;
-  if (h !== undefined && h < 10) timeLabel = "朝";
-  else if (h !== undefined && h < 15) timeLabel = "昼";
+  if (h >= 5 && h < 11) timeLabel = "朝";
+  else if (h >= 11 && h < 17) timeLabel = "昼";
   else timeLabel = "夜";
 
   return `${dateLabel} ${timeLabel}`;

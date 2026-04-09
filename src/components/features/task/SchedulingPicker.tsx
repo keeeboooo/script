@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Clock, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ interface SchedulingPickerProps {
   defaultDate?: string;
   defaultTime?: string;
   compact?: boolean;
+  taskTitle?: string;
 }
 
 type TimeSlot = "朝" | "昼" | "夜" | "指定";
@@ -29,6 +30,7 @@ export function SchedulingPicker({
   defaultDate,
   defaultTime,
   compact = false,
+  taskTitle,
 }: SchedulingPickerProps) {
   const [selectedDate, setSelectedDate] = useState<string>(defaultDate ?? "");
   const [showTimePicker, setShowTimePicker] = useState(!!defaultTime);
@@ -36,11 +38,11 @@ export function SchedulingPicker({
   const [customTime, setCustomTime] = useState(defaultTime ?? "");
   const [showCalendar, setShowCalendar] = useState(false);
 
-  const quickDates = [
+  const quickDates = useMemo(() => [
     { label: "今日", value: getTodayStr() },
     { label: "明日", value: getTomorrowStr() },
     { label: "今週末", value: getWeekendStr() },
-  ];
+  ], []);
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
@@ -81,10 +83,17 @@ export function SchedulingPicker({
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-medium text-foreground/80 flex items-center gap-1.5">
-          <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-          いつやりますか？
-        </p>
+        <div className="flex flex-col gap-0.5">
+          <p className="text-sm font-medium text-foreground/80 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+            いつやりますか？
+          </p>
+          {taskTitle && (
+            <p className="text-xs text-muted-foreground pl-5 truncate max-w-[220px]">
+              {taskTitle}
+            </p>
+          )}
+        </div>
         <motion.button
           onClick={onSkip}
           className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"

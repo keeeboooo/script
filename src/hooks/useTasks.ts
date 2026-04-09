@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Task, TaskStatus } from "@/components/features/task/TaskItem";
 import { v4 as uuidv4 } from "uuid";
 import { BreakdownResponseSchema, BreakdownTaskSchema } from "@/lib/schemas";
+import { getTodayStr } from "@/lib/date";
 import { z } from "zod";
 
 const SingleEditResponseSchema = z.object({ task: BreakdownTaskSchema });
@@ -155,36 +156,98 @@ export function useTasks() {
 
   const scheduleTask = useCallback(
     async (id: string, date: string, time?: string) => {
+      const target = tasks.find((t) => t.id === id);
+      if (!target) return;
+
+      const isParent = !target.parentId;
+
+      // 親タスクの場合: 未上書きのサブタスク（親と同じ日付 or 未設定）も一括更新
+      const inheritingSubTasks = isParent
+        ? tasks.filter(
+            (t) => t.parentId === id && (t.scheduledDate === target.scheduledDate)
+          )
+        : [];
+
+      const prevSnapshots = [target, ...inheritingSubTasks].map((t) => ({
+        id: t.id,
+        scheduledDate: t.scheduledDate,
+        scheduledTime: t.scheduledTime,
+      }));
+
+      // 楽観的更新
       setTasks((prev) =>
-        prev.map((t) =>
-          t.id === id
-            ? { ...t, scheduledDate: date, scheduledTime: time ?? undefined }
-            : t
-        )
+        prev.map((t) => {
+          if (t.id === id) return { ...t, scheduledDate: date, scheduledTime: time ?? undefined };
+          if (inheritingSubTasks.some((s) => s.id === t.id)) return { ...t, scheduledDate: date, scheduledTime: time ?? undefined };
+          return t;
+        })
       );
-      await supabase
+
+      const idsToUpdate = [id, ...inheritingSubTasks.map((t) => t.id)];
+      const { error } = await supabase
         .from("tasks")
         .update({ scheduled_date: date, scheduled_time: time ?? null })
-        .eq("id", id);
+        .in("id", idsToUpdate);
+
+      if (error) {
+        // ロールバック
+        setTasks((prev) =>
+          prev.map((t) => {
+            const snap = prevSnapshots.find((s) => s.id === t.id);
+            return snap ? { ...t, scheduledDate: snap.scheduledDate, scheduledTime: snap.scheduledTime } : t;
+          })
+        );
+      }
     },
-    [supabase]
+    [tasks, supabase]
   );
 
   const unscheduleTask = useCallback(
     async (id: string) => {
+      const target = tasks.find((t) => t.id === id);
+      if (!target) return;
+
+      const isParent = !target.parentId;
+
+      // 親タスクの場合: 未上書きのサブタスク（親と同じ日付）も一括解除
+      const inheritingSubTasks = isParent
+        ? tasks.filter(
+            (t) => t.parentId === id && t.scheduledDate === target.scheduledDate
+          )
+        : [];
+
+      const prevSnapshots = [target, ...inheritingSubTasks].map((t) => ({
+        id: t.id,
+        scheduledDate: t.scheduledDate,
+        scheduledTime: t.scheduledTime,
+      }));
+
+      // 楽観的更新
       setTasks((prev) =>
-        prev.map((t) =>
-          t.id === id
-            ? { ...t, scheduledDate: undefined, scheduledTime: undefined }
-            : t
-        )
+        prev.map((t) => {
+          if (t.id === id) return { ...t, scheduledDate: undefined, scheduledTime: undefined };
+          if (inheritingSubTasks.some((s) => s.id === t.id)) return { ...t, scheduledDate: undefined, scheduledTime: undefined };
+          return t;
+        })
       );
-      await supabase
+
+      const idsToUpdate = [id, ...inheritingSubTasks.map((t) => t.id)];
+      const { error } = await supabase
         .from("tasks")
         .update({ scheduled_date: null, scheduled_time: null })
-        .eq("id", id);
+        .in("id", idsToUpdate);
+
+      if (error) {
+        // ロールバック
+        setTasks((prev) =>
+          prev.map((t) => {
+            const snap = prevSnapshots.find((s) => s.id === t.id);
+            return snap ? { ...t, scheduledDate: snap.scheduledDate, scheduledTime: snap.scheduledTime } : t;
+          })
+        );
+      }
     },
-    [supabase]
+    [tasks, supabase]
   );
 
   // ─── Magic Breakdown ────────────────────────────────────────────────────────
@@ -446,10 +509,7 @@ export function useTasks() {
     [tasks]
   );
 
-  const todayStr = useMemo(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }, []);
+  const todayStr = useMemo(() => getTodayStr(), []);
 
   const todayTasks = useMemo(
     () => tasks.filter((t) => t.scheduledDate === todayStr),
