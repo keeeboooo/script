@@ -88,6 +88,27 @@ export function useTasks() {
         .from("tasks")
         .update({ status: newStatus })
         .eq("id", id);
+
+      // サブタスクを done にした時、全兄弟が done/canceled なら親も自動完了
+      if (newStatus === "done" && task.parentId) {
+        const siblings = tasks.filter(
+          (t) => t.parentId === task.parentId && t.id !== id
+        );
+        const allSiblingsDone = siblings.every(
+          (t) => t.status === "done" || t.status === "canceled"
+        );
+        if (allSiblingsDone) {
+          setTasks((prev) =>
+            prev.map((t) =>
+              t.id === task.parentId ? { ...t, status: "done" } : t
+            )
+          );
+          await supabase
+            .from("tasks")
+            .update({ status: "done" })
+            .eq("id", task.parentId);
+        }
+      }
     },
     [tasks, supabase]
   );

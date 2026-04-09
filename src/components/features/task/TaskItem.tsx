@@ -68,6 +68,7 @@ export function TaskItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(task.title);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showAllSubtasks, setShowAllSubtasks] = useState(false);
   const [isAIEditOpen, setIsAIEditOpen] = useState(false);
   const [aiInstruction, setAiInstruction] = useState("");
   const [isAIEditing, setIsAIEditing] = useState(false);
@@ -569,7 +570,7 @@ export function TaskItem({
             className="overflow-hidden pl-4 pr-0 border-l-2 border-foreground/10 ml-2"
           >
             <div className="flex flex-col gap-1.5">
-              {subTasks.map((subTask) => (
+              {(showAllSubtasks || subTasks.length < 7 ? subTasks : subTasks.slice(0, 6)).map((subTask) => (
                 <div key={subTask.id} className="relative">
                   <TaskItem
                     task={subTask}
@@ -585,6 +586,26 @@ export function TaskItem({
                   <div className="absolute left-[-26px] top-1/2 w-4 h-px bg-foreground/10" />
                 </div>
               ))}
+              {subTasks.length >= 7 && !showAllSubtasks && (
+                <motion.button
+                  onClick={() => setShowAllSubtasks(true)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors py-1 px-2 rounded-lg hover:bg-secondary/50 text-left"
+                  whileTap={{ scale: 0.97 }}
+                  transition={springTransition}
+                >
+                  残り{subTasks.length - 6}個を表示
+                </motion.button>
+              )}
+              {subTasks.length >= 7 && showAllSubtasks && (
+                <motion.button
+                  onClick={() => setShowAllSubtasks(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors py-1 px-2 rounded-lg hover:bg-secondary/50 text-left"
+                  whileTap={{ scale: 0.97 }}
+                  transition={springTransition}
+                >
+                  折りたたむ
+                </motion.button>
+              )}
             </div>
           </motion.div>
         )}

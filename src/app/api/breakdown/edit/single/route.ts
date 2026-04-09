@@ -30,10 +30,15 @@ Take into account the other sub-tasks so the revised task does not duplicate or 
 
 CRITICAL REQUIREMENT: YOU MUST RESPOND ENTIRELY IN JAPANESE (日本語).
 
+TITLE RULES:
+- The task title MUST be 20 characters or fewer.
+- Write as a short, punchy verb phrase (e.g. "材料をAmazonで注文する", "レシピ動画を3本見る").
+- No explanations, no parenthetical notes — just the action.
+
 Respond STRICTLY with a JSON object, without markdown formatting:
 {
   "task": {
-    "title": "動詞で始まる具体的で行動可能なステップ（日本語）",
+    "title": "動詞で始まる20文字以内の行動（日本語）",
     "estimatedTime": "15分",
     "actionLink": "https://example.com/useful-link"
   }
