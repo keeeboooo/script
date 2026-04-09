@@ -71,7 +71,6 @@ export function TaskItem({
   const [isAIEditOpen, setIsAIEditOpen] = useState(false);
   const [aiInstruction, setAiInstruction] = useState("");
   const [isAIEditing, setIsAIEditing] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
   const [isSchedulePickerOpen, setIsSchedulePickerOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const aiInputRef = useRef<HTMLTextAreaElement>(null);

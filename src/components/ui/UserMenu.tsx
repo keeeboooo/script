@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, LogOut, Loader2, Pencil, Check, X } from "lucide-react";
@@ -18,8 +18,14 @@ export function UserMenu() {
   const router = useRouter();
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const supabase = useRef(createClient()).current;
+  const supabase = useMemo(() => createClient(), []);
   const { displayName, updateDisplayName } = useDisplayName();
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setSaveError(null);
+    setEditValue("");
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -60,12 +66,6 @@ export function UserMenu() {
     setEditValue(displayName);
     setSaveError(null);
     setIsEditing(true);
-  };
-
-  const cancelEdit = () => {
-    setIsEditing(false);
-    setSaveError(null);
-    setEditValue("");
   };
 
   const commitEdit = async () => {

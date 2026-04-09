@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DisplayNameSchema } from "@/lib/schemas";
 
@@ -17,7 +17,7 @@ interface UseDisplayNameResult {
 export function useDisplayName(): UseDisplayNameResult {
   const [displayName, setDisplayName] = useState("");
   const [isFetching, setIsFetching] = useState(true);
-  const supabase = useRef(createClient()).current;
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     let cancelled = false;

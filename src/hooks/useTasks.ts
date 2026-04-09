@@ -1,21 +1,21 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Task, TaskStatus } from "@/components/features/task/TaskItem";
 import { v4 as uuidv4 } from "uuid";
 import { BreakdownResponseSchema, BreakdownTaskSchema } from "@/lib/schemas";
 import { getTodayStr } from "@/lib/date";
+import { createClient } from "@/lib/supabase/client";
 import { z } from "zod";
 
 const SingleEditResponseSchema = z.object({ task: BreakdownTaskSchema });
-import { createClient } from "@/lib/supabase/client";
 
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
 
-  const supabase = useRef(createClient()).current;
+  const supabase = useMemo(() => createClient(), []);
 
   // ─── DB rows → Task ────────────────────────────────────────────────────────
 
@@ -458,7 +458,6 @@ export function useTasks() {
         return result;
       });
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [tasks, supabase]
   );
 
