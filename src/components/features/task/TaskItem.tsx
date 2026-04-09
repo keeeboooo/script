@@ -2,9 +2,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Circle, Compass, X, GripVertical, Pencil, Play, Undo2, Wand2, Send, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, Compass, X, GripVertical, Pencil, Play, Undo2, Wand2, Send, Loader2, CalendarDays } from "lucide-react";
+import { SchedulingPicker } from "./SchedulingPicker";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
+import { formatScheduleBadge } from "@/lib/date";
 import { toast } from "sonner";
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'canceled';
@@ -21,6 +23,9 @@ export interface Task {
   linkedRoadmapId?: string;
   linkedMilestoneId?: string;
   parentId?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
+  firstStep?: string;
 }
 
 interface TaskItemProps {
@@ -30,6 +35,8 @@ interface TaskItemProps {
   onDelete: (id: string) => void;
   onEdit: (id: string, newTitle: string) => void;
   onEditBreakdown?: (taskId: string, instruction: string) => Promise<void>;
+  onScheduleTask?: (id: string, date: string, time?: string) => void;
+  onUnscheduleTask?: (id: string) => void;
   index?: number;
   onDragStart?: (index: number) => void;
   onDragOver?: (index: number) => void;
@@ -50,6 +57,8 @@ export function TaskItem({
   onDelete,
   onEdit,
   onEditBreakdown,
+  onScheduleTask,
+  onUnscheduleTask,
   index = 0,
   onDragStart,
   onDragOver,
@@ -62,7 +71,7 @@ export function TaskItem({
   const [isAIEditOpen, setIsAIEditOpen] = useState(false);
   const [aiInstruction, setAiInstruction] = useState("");
   const [isAIEditing, setIsAIEditing] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
+  const [isSchedulePickerOpen, setIsSchedulePickerOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const aiInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -320,6 +329,18 @@ export function TaskItem({
                       <span className="opacity-70">↗</span> Link
                     </a>
                   )}
+                  {task.scheduledDate && (
+                    <motion.button
+                      onClick={() => onUnscheduleTask?.(task.id)}
+                      className="flex items-center gap-1 bg-secondary/50 px-2 py-0.5 rounded-md text-xs text-muted-foreground hover:bg-destructive/20 hover:text-destructive-foreground transition-colors"
+                      whileTap={{ scale: 0.95 }}
+                      transition={springTransition}
+                      title="スケジュールを解除"
+                    >
+                      <CalendarDays className="w-3 h-3 opacity-70" />
+                      {formatScheduleBadge(task.scheduledDate, task.scheduledTime)}
+                    </motion.button>
+                  )}
 
                   {hasSubtasks && (
                     <button
@@ -413,6 +434,24 @@ export function TaskItem({
                       <Wand2 className="w-3.5 h-3.5" />
                     </motion.button>
                   )}
+                  {task.status !== "done" && onScheduleTask && (
+                    <motion.button
+                      onClick={() => setIsSchedulePickerOpen((prev) => !prev)}
+                      className={cn(
+                        "p-1.5 rounded-lg transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
+                        isSchedulePickerOpen
+                          ? "text-foreground bg-secondary/50"
+                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                      )}
+                      whileTap={{ scale: 0.9 }}
+                      transition={springTransition}
+                      title="スケジュール"
+                      aria-label="スケジュールを設定"
+                      aria-pressed={isSchedulePickerOpen}
+                    >
+                      <CalendarDays className="w-3.5 h-3.5" />
+                    </motion.button>
+                  )}
                   <motion.button
                     onClick={() => onDelete(task.id)}
                     className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive-foreground hover:bg-destructive/20 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
@@ -476,6 +515,50 @@ export function TaskItem({
         )}
       </AnimatePresence>
 
+      {/* Scheduling Picker Panel */}
+      <AnimatePresence>
+        {isSchedulePickerOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: "auto", marginTop: 8 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={springTransition}
+            className="overflow-hidden"
+          >
+            <SchedulingPicker
+              defaultDate={task.scheduledDate}
+              defaultTime={task.scheduledTime}
+              onSchedule={(date, time) => {
+                onScheduleTask?.(task.id, date, time);
+                setIsSchedulePickerOpen(false);
+              }}
+              onSkip={() => setIsSchedulePickerOpen(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* First Step hint */}
+      <AnimatePresence>
+        {task.firstStep && task.status !== "done" && task.status !== "canceled" && !isSubTask && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: "auto", marginTop: 6 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={springTransition}
+            className="overflow-hidden"
+          >
+            <div className="flex items-start gap-2 px-2 py-1.5 rounded-xl bg-secondary/30 border border-foreground/5">
+              <span className="text-xs text-muted-foreground mt-0.5 flex-shrink-0">⚡</span>
+              <p className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground/70">まず: </span>
+                {task.firstStep}
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Subtasks Accordion */}
       <AnimatePresence>
         {isExpanded && hasSubtasks && (
@@ -495,6 +578,8 @@ export function TaskItem({
                     onDelete={onDelete}
                     onEdit={onEdit}
                     onEditBreakdown={onEditBreakdown}
+                    onScheduleTask={onScheduleTask}
+                    onUnscheduleTask={onUnscheduleTask}
                     isSubTask
                   />
                   <div className="absolute left-[-26px] top-1/2 w-4 h-px bg-foreground/10" />

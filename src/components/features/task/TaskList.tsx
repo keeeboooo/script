@@ -3,7 +3,10 @@
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Task, TaskItem, TaskStatus } from "./TaskItem";
+import { SchedulingPicker } from "./SchedulingPicker";
 import { cn } from "@/lib/utils";
+import { springTransition } from "@/lib/motion";
+import { getTodayStr } from "@/lib/date";
 
 interface TaskListProps {
   tasks: Task[];
@@ -13,6 +16,11 @@ interface TaskListProps {
   onEditTask: (id: string, newTitle: string) => void;
   onReorderTasks: (fromIndex: number, toIndex: number) => void;
   onEditBreakdown?: (taskId: string, instruction: string) => Promise<void>;
+  onScheduleTask?: (id: string, date: string, time?: string) => void;
+  onUnscheduleTask?: (id: string) => void;
+  /** ID of the task that just had Breakdown run — shows inline SchedulingPicker */
+  newlyBreakdownTaskId?: string | null;
+  onDismissSchedulingPrompt?: () => void;
 }
 
 interface TaskWithIndex extends Task {
@@ -37,6 +45,10 @@ export function TaskList({
   onEditTask,
   onReorderTasks,
   onEditBreakdown,
+  onScheduleTask,
+  onUnscheduleTask,
+  newlyBreakdownTaskId,
+  onDismissSchedulingPrompt,
 }: TaskListProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -63,6 +75,8 @@ export function TaskList({
     [tasks]
   );
 
+  const todayStr = useMemo(() => getTodayStr(), []);
+
   const processedTasks: TaskWithIndex[] = useMemo(() => {
     if (viewMode === "project") {
       return tasksWithIndex
@@ -72,6 +86,7 @@ export function TaskList({
           subTasks: tasksWithIndex.filter((st) => st.parentId === t.id),
         }));
     }
+    // Today mode: flat list of leaf tasks (no parents)
     return tasksWithIndex
       .filter((t) => {
         const isParent = tasksWithIndex.some((st) => st.parentId === t.id);
@@ -86,6 +101,7 @@ export function TaskList({
       });
   }, [tasksWithIndex, viewMode]);
 
+  // Project mode groups
   const inProgressTasks = useMemo(
     () => processedTasks.filter((t) => t.status === "in_progress"),
     [processedTasks]
@@ -99,13 +115,32 @@ export function TaskList({
     [processedTasks]
   );
 
+  // Today mode: 3-bucket split
+  const todayBucketTasks = useMemo(
+    () => processedTasks.filter((t) => t.scheduledDate === todayStr && t.status !== "done" && t.status !== "canceled"),
+    [processedTasks, todayStr]
+  );
+  const scheduledBucketTasks = useMemo(
+    () => processedTasks.filter((t) => t.scheduledDate && t.scheduledDate > todayStr && t.status !== "done" && t.status !== "canceled"),
+    [processedTasks, todayStr]
+  );
+  const somedayBucketTasks = useMemo(
+    () => processedTasks.filter((t) => !t.scheduledDate && t.status !== "done" && t.status !== "canceled"),
+    [processedTasks]
+  );
+  const doneBucketTasks = useMemo(
+    () => processedTasks.filter((t) => t.status === "done" || t.status === "canceled"),
+    [processedTasks]
+  );
+
   if (tasks.length === 0) return null;
 
   const renderGroup = (
     groupTasks: TaskWithIndex[],
     title: string,
     showEmptyIfZero = false,
-    compact = false
+    compact = false,
+    emptyMessage = "タスクはありません"
   ) => {
     if (groupTasks.length === 0 && !showEmptyIfZero) return null;
 
@@ -131,6 +166,8 @@ export function TaskList({
               onDelete={onDeleteTask}
               onEdit={onEditTask}
               onEditBreakdown={onEditBreakdown}
+              onScheduleTask={onScheduleTask}
+              onUnscheduleTask={onUnscheduleTask}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
@@ -145,7 +182,7 @@ export function TaskList({
               exit={{ opacity: 0 }}
               className="px-4 py-8 rounded-2xl border border-dashed border-border/40 text-center text-sm text-muted-foreground"
             >
-              実行中のタスクはありません
+              {emptyMessage}
             </motion.div>
           )}
         </AnimatePresence>
@@ -176,7 +213,7 @@ export function TaskList({
             Projects
           </button>
           <button
-            onClick={() => setViewMode("today")}
+            onClick={() => { setViewMode("today"); onDismissSchedulingPrompt?.(); }}
             aria-pressed={viewMode === "today"}
             className={cn(
               "px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300",
@@ -190,9 +227,42 @@ export function TaskList({
         </div>
       </div>
 
-      {renderGroup(inProgressTasks, "In Progress", false, viewMode === "today")}
-      {renderGroup(todoTasks, "Todo", false, viewMode === "today")}
-      {renderGroup(doneTasks, "Done", false, viewMode === "today")}
+      {/* Breakdown直後のインラインスケジューリングプロンプト */}
+      <AnimatePresence>
+        {newlyBreakdownTaskId && viewMode === "project" && onScheduleTask && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={springTransition}
+            className="mb-3"
+          >
+            <SchedulingPicker
+              onSchedule={(date, time) => {
+                onScheduleTask(newlyBreakdownTaskId, date, time);
+                onDismissSchedulingPrompt?.();
+              }}
+              onSkip={() => onDismissSchedulingPrompt?.()}
+              taskTitle={tasks.find((t) => t.id === newlyBreakdownTaskId)?.title}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {viewMode === "project" ? (
+        <>
+          {renderGroup(inProgressTasks, "In Progress")}
+          {renderGroup(todoTasks, "Todo")}
+          {renderGroup(doneTasks, "Done")}
+        </>
+      ) : (
+        <>
+          {renderGroup(todayBucketTasks, "Today", true, true, "今日の予定はありません")}
+          {renderGroup(scheduledBucketTasks, "Scheduled", false, true)}
+          {renderGroup(somedayBucketTasks, "Someday", true, true, "いつかやるタスクはありません")}
+          {renderGroup(doneBucketTasks, "Done", false, true)}
+        </>
+      )}
     </motion.div>
   );
 }

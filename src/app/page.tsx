@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { TaskInput } from "@/components/features/task/TaskInput";
 import { TaskList } from "@/components/features/task/TaskList";
 import { useTasks } from "@/hooks/useTasks";
@@ -9,6 +10,8 @@ import { Trash2, Sparkles } from "lucide-react";
 const springTransition = { type: "spring" as const, stiffness: 260, damping: 20 };
 
 export default function Home() {
+  const [lastBreakdownTaskId, setLastBreakdownTaskId] = useState<string | null>(null);
+
   const {
     tasks,
     breakdownTask,
@@ -22,7 +25,16 @@ export default function Home() {
     isLoading,
     isBreakingDown,
     completedCount,
+    scheduleTask,
+    unscheduleTask,
   } = useTasks();
+
+  const handleBreakdown = async (prompt: string) => {
+    const newParentId = await breakdownTask(prompt);
+    if (newParentId) {
+      setLastBreakdownTaskId(newParentId);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center w-full max-w-3xl mx-auto space-y-4 pt-2 sm:pt-4">
@@ -36,7 +48,7 @@ export default function Home() {
       </div>
 
       <div className="w-full relative z-10">
-        <TaskInput onSubmit={breakdownTask} isLoading={isLoading} />
+        <TaskInput onSubmit={handleBreakdown} isLoading={isLoading} />
 
         {isLoading && (
           <motion.div
@@ -70,6 +82,10 @@ export default function Home() {
               onEditTask={editTask}
               onReorderTasks={reorderTasks}
               onEditBreakdown={editBreakdown}
+              onScheduleTask={scheduleTask}
+              onUnscheduleTask={unscheduleTask}
+              newlyBreakdownTaskId={lastBreakdownTaskId}
+              onDismissSchedulingPrompt={() => setLastBreakdownTaskId(null)}
             />
 
             {/* Bulk action bar */}
