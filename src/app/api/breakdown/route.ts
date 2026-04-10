@@ -46,14 +46,14 @@ export async function POST(req: Request) {
     const parsed = BreakdownRequestSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid request", details: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json({ error: "Invalid request", errorCode: "VALIDATION_ERROR", details: parsed.error.flatten() }, { status: 400 });
     }
 
     const { prompt } = parsed.data;
 
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "API key not configured" }, { status: 500 });
+      return NextResponse.json({ error: "API key not configured", errorCode: "API_KEY_MISSING" }, { status: 500 });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -72,13 +72,17 @@ export async function POST(req: Request) {
       const breakdown = BreakdownResponseSchema.parse(JSON.parse(jsonString));
       return NextResponse.json(breakdown);
     } catch {
-      return NextResponse.json({ error: "Failed to parse AI response" }, { status: 502 });
+      return NextResponse.json({ error: "Failed to parse AI response", errorCode: "AI_PARSE_FAILURE" }, { status: 502 });
     }
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid request", errorCode: "VALIDATION_ERROR" }, { status: 400 });
+    }
+    const msg = error instanceof Error ? error.message.toLowerCase() : "";
+    if (msg.includes("429") || msg.includes("quota") || msg.includes("rate limit")) {
+      return NextResponse.json({ error: "Rate limited", errorCode: "RATE_LIMIT" }, { status: 429 });
     }
     console.error("Error in breakdown API:", getErrorMessage(error));
-    return NextResponse.json({ error: "Failed to process task" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to process task", errorCode: "INTERNAL_ERROR" }, { status: 500 });
   }
 }

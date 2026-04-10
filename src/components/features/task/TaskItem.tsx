@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
 import { formatScheduleBadge } from "@/lib/date";
 import { toast } from "sonner";
+import { ApiError, getUserFriendlyErrorMessage, getNetworkErrorMessage } from "@/lib/errors";
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'canceled';
 
@@ -108,7 +109,11 @@ export function TaskItem({
       setIsAIEditOpen(false);
       setAiInstruction("");
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "AI修正に失敗しました");
+      if (error instanceof ApiError) {
+        toast.error(getUserFriendlyErrorMessage(error.status, error.errorCode));
+      } else {
+        toast.error(getNetworkErrorMessage());
+      }
     } finally {
       setIsAIEditing(false);
     }

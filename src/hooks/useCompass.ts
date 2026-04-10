@@ -8,6 +8,8 @@ import {
   ChatResponseSchema,
 } from "@/lib/schemas";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { ApiError, getUserFriendlyErrorMessage, getNetworkErrorMessage, parseApiError } from "@/lib/errors";
 
 export interface ChatMessage {
   id: string;
@@ -283,7 +285,7 @@ export function useCompass() {
           }),
         });
 
-        if (!response.ok) throw new Error(`Chat API error: ${response.status}`);
+        if (!response.ok) throw await parseApiError(response);
 
         const parsed = ChatResponseSchema.safeParse(await response.json());
         if (parsed.success) {
@@ -308,8 +310,13 @@ export function useCompass() {
             });
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Failed to send chat message:", error);
+        if (error instanceof ApiError) {
+          toast.error(getUserFriendlyErrorMessage(error.status, error.errorCode));
+        } else {
+          toast.error(getNetworkErrorMessage());
+        }
       } finally {
         setIsChatLoading(false);
       }
@@ -356,7 +363,7 @@ export function useCompass() {
         }),
       });
 
-      if (!response.ok) throw new Error(`Philosophy API error: ${response.status}`);
+      if (!response.ok) throw await parseApiError(response);
 
       const parsed = PhilosophySchema.safeParse(await response.json());
       if (!parsed.success) return;
@@ -457,8 +464,13 @@ export function useCompass() {
           )
         );
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Failed to generate philosophy:", error);
+      if (error instanceof ApiError) {
+        toast.error(getUserFriendlyErrorMessage(error.status, error.errorCode));
+      } else {
+        toast.error(getNetworkErrorMessage());
+      }
     } finally {
       setIsPhilosophyLoading(false);
     }
@@ -533,7 +545,7 @@ export function useCompass() {
           body: JSON.stringify({ goal, timeframe, philosophy: philosophyPayload }),
         });
 
-        if (!response.ok) throw new Error(`Roadmap API error: ${response.status}`);
+        if (!response.ok) throw await parseApiError(response);
 
         const parsed = RoadmapResponseSchema.safeParse(await response.json());
         if (!parsed.success) return null;
@@ -569,8 +581,13 @@ export function useCompass() {
         const newRoadmap = rowToRoadmap(roadmapRow, milestones);
         setRoadmaps((prev) => [newRoadmap, ...prev]);
         return newRoadmap.id;
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Failed to generate roadmap:", error);
+        if (error instanceof ApiError) {
+          toast.error(getUserFriendlyErrorMessage(error.status, error.errorCode));
+        } else {
+          toast.error(getNetworkErrorMessage());
+        }
         return null;
       } finally {
         setIsRoadmapLoading(false);
@@ -727,11 +744,11 @@ export function useCompass() {
       });
 
       if (!response.ok) {
-        throw new Error(`Edit roadmap API error: ${response.status}`);
+        throw await parseApiError(response);
       }
 
       const parsed = RoadmapResponseSchema.safeParse(await response.json());
-      if (!parsed.success) throw new Error("Failed to parse AI response");
+      if (!parsed.success) throw new ApiError(502, "AI_PARSE_FAILURE");
 
       // INSERT先にしてからDELETE（INSERT失敗時のデータ消失を防ぐ）
       const { data: newMilestoneRows } = await supabase

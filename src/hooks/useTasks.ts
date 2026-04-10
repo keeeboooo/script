@@ -7,6 +7,8 @@ import { BreakdownResponseSchema, BreakdownTaskSchema } from "@/lib/schemas";
 import { getTodayStr } from "@/lib/date";
 import { createClient } from "@/lib/supabase/client";
 import { z } from "zod";
+import { toast } from "sonner";
+import { ApiError, getUserFriendlyErrorMessage, getNetworkErrorMessage, parseApiError } from "@/lib/errors";
 
 const SingleEditResponseSchema = z.object({ task: BreakdownTaskSchema });
 
@@ -264,7 +266,9 @@ export function useTasks() {
         });
 
         if (!response.ok) {
-          throw new Error(`Breakdown API error: ${response.status}`);
+          const err = await parseApiError(response);
+          toast.error(getUserFriendlyErrorMessage(err.status, err.errorCode));
+          return null;
         }
 
         const parsed = BreakdownResponseSchema.safeParse(await response.json());
@@ -326,8 +330,9 @@ export function useTasks() {
 
         setTasks((prev) => [parentTask, ...newTasks, ...prev]);
         return parentId;
-      } catch (error) {
+      } catch (error: unknown) {
         console.error("Failed to breakdown task:", error);
+        toast.error(getNetworkErrorMessage());
         return null;
       } finally {
         setIsLoading(false);
@@ -367,11 +372,11 @@ export function useTasks() {
         });
 
         if (!response.ok) {
-          throw new Error(`Edit breakdown API error: ${response.status}`);
+          throw await parseApiError(response);
         }
 
         const parsed = SingleEditResponseSchema.safeParse(await response.json());
-        if (!parsed.success) throw new Error("Failed to parse AI response");
+        if (!parsed.success) throw new ApiError(502, "AI_PARSE_FAILURE");
 
         const updated = parsed.data.task;
 
@@ -412,11 +417,11 @@ export function useTasks() {
       });
 
       if (!response.ok) {
-        throw new Error(`Edit breakdown API error: ${response.status}`);
+        throw await parseApiError(response);
       }
 
       const parsed = BreakdownResponseSchema.safeParse(await response.json());
-      if (!parsed.success) throw new Error("Failed to parse AI response");
+      if (!parsed.success) throw new ApiError(502, "AI_PARSE_FAILURE");
 
       const {
         data: { user },
