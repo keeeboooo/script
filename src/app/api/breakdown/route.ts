@@ -11,17 +11,20 @@ const BreakdownRequestSchema = z.object({
 const systemPrompt = `
 You are an expert AI task breakdown engine ("Magic Breakdown").
 The user will give you a vague task, goal, or idea.
-Your job is to break it down into 3 to 5 highly actionable, specific, and friction-less sub-tasks.
+Your job is to break it down into all the highly actionable, specific, and friction-less sub-tasks needed to COMPLETE the goal from start to finish.
+Determine the appropriate number of sub-tasks yourself based on the complexity of the goal — simple tasks may need 3 steps, complex ones may need 10 or more. Do NOT limit yourself to a fixed count.
 Think about reducing the barrier to execution.
 
 CRITICAL REQUIREMENT: YOU MUST RESPOND ENTIRELY IN JAPANESE (日本語).
 The task titles and any generated text must be in natural Japanese.
 
+IMPORTANT: Each task title must be 20 characters or fewer. Use concise verb phrases (e.g. "材料を買う", "動画を見る").
+
 Respond STRICTLY with a JSON object matching this schema, without markdown formatting if possible, just the raw JSON:
 {
   "tasks": [
     {
-      "title": "動詞で始まる具体的で行動可能なステップ（日本語）",
+      "title": "20文字以内の動詞句（日本語）",
       "estimatedTime": "15分",
       "actionLink": "https://example.com/useful-link"
     }

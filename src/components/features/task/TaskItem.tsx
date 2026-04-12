@@ -68,6 +68,7 @@ export function TaskItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(task.title);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showAllSubtasks, setShowAllSubtasks] = useState(false);
   const [isAIEditOpen, setIsAIEditOpen] = useState(false);
   const [aiInstruction, setAiInstruction] = useState("");
   const [isAIEditing, setIsAIEditing] = useState(false);
@@ -569,7 +570,10 @@ export function TaskItem({
             className="overflow-hidden pl-4 pr-0 border-l-2 border-foreground/10 ml-2"
           >
             <div className="flex flex-col gap-1.5">
-              {subTasks.map((subTask) => (
+              {(subTasks.length >= 7 && !showAllSubtasks
+                ? subTasks.slice(0, 6)
+                : subTasks
+              ).map((subTask) => (
                 <div key={subTask.id} className="relative">
                   <TaskItem
                     task={subTask}
@@ -585,6 +589,16 @@ export function TaskItem({
                   <div className="absolute left-[-26px] top-1/2 w-4 h-px bg-foreground/10" />
                 </div>
               ))}
+              {subTasks.length >= 7 && (
+                <button
+                  onClick={() => setShowAllSubtasks((v) => !v)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors duration-200 py-1 text-left"
+                >
+                  {showAllSubtasks
+                    ? "折りたたむ"
+                    : `残り${subTasks.length - 6}個を表示`}
+                </button>
+              )}
             </div>
           </motion.div>
         )}

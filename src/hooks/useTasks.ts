@@ -80,14 +80,30 @@ export function useTasks() {
       if (!task) return;
       const newStatus: TaskStatus = task.status === "done" ? "todo" : "done";
 
+      // Check if all siblings are done/canceled → auto-complete parent
+      let parentToComplete: string | undefined;
+      if (newStatus === "done" && task.parentId) {
+        const siblings = tasks.filter((t) => t.parentId === task.parentId && t.id !== id);
+        const allDone = siblings.every(
+          (t) => t.status === "done" || t.status === "canceled"
+        );
+        if (allDone) {
+          parentToComplete = task.parentId;
+        }
+      }
+
       setTasks((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
+        prev.map((t) => {
+          if (t.id === id) return { ...t, status: newStatus };
+          if (parentToComplete && t.id === parentToComplete) return { ...t, status: "done" as TaskStatus };
+          return t;
+        })
       );
 
-      await supabase
-        .from("tasks")
-        .update({ status: newStatus })
-        .eq("id", id);
+      await supabase.from("tasks").update({ status: newStatus }).eq("id", id);
+      if (parentToComplete) {
+        await supabase.from("tasks").update({ status: "done" }).eq("id", parentToComplete);
+      }
     },
     [tasks, supabase]
   );
