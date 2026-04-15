@@ -90,23 +90,36 @@ export function useTasks() {
         .eq("id", id);
 
       // サブタスクを done にした時、全兄弟が done/canceled なら親も自動完了
+      // 注: siblings は setTasks 前の tasks を参照するため、対象タスク自身はまだ "done" でない状態で評価される
       if (newStatus === "done" && task.parentId) {
         const siblings = tasks.filter(
           (t) => t.parentId === task.parentId && t.id !== id
         );
-        const allSiblingsDone = siblings.every(
-          (t) => t.status === "done" || t.status === "canceled"
-        );
-        if (allSiblingsDone) {
-          setTasks((prev) =>
-            prev.map((t) =>
-              t.id === task.parentId ? { ...t, status: "done" } : t
-            )
+        // サブタスクが1つだけの場合（siblings が空）は自動完了しない
+        if (siblings.length > 0) {
+          const allSiblingsDone = siblings.every(
+            (t) => t.status === "done" || t.status === "canceled"
           );
-          await supabase
-            .from("tasks")
-            .update({ status: "done" })
-            .eq("id", task.parentId);
+          if (allSiblingsDone) {
+            const parentPrevStatus = tasks.find((t) => t.id === task.parentId)?.status;
+            setTasks((prev) =>
+              prev.map((t) =>
+                t.id === task.parentId ? { ...t, status: "done" } : t
+              )
+            );
+            const { error: parentError } = await supabase
+              .from("tasks")
+              .update({ status: "done" })
+              .eq("id", task.parentId);
+            if (parentError && parentPrevStatus !== undefined) {
+              // ロールバック: 親タスクの更新が失敗した場合は元のステータスに戻す
+              setTasks((prev) =>
+                prev.map((t) =>
+                  t.id === task.parentId ? { ...t, status: parentPrevStatus } : t
+                )
+              );
+            }
+          }
         }
       }
     },

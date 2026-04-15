@@ -586,24 +586,14 @@ export function TaskItem({
                   <div className="absolute left-[-26px] top-1/2 w-4 h-px bg-foreground/10" />
                 </div>
               ))}
-              {subTasks.length >= 7 && !showAllSubtasks && (
+              {subTasks.length >= 7 && (
                 <motion.button
-                  onClick={() => setShowAllSubtasks(true)}
+                  onClick={() => setShowAllSubtasks((prev) => !prev)}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors py-1 px-2 rounded-lg hover:bg-secondary/50 text-left"
                   whileTap={{ scale: 0.97 }}
                   transition={springTransition}
                 >
-                  残り{subTasks.length - 6}個を表示
-                </motion.button>
-              )}
-              {subTasks.length >= 7 && showAllSubtasks && (
-                <motion.button
-                  onClick={() => setShowAllSubtasks(false)}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors py-1 px-2 rounded-lg hover:bg-secondary/50 text-left"
-                  whileTap={{ scale: 0.97 }}
-                  transition={springTransition}
-                >
-                  折りたたむ
+                  {showAllSubtasks ? "折りたたむ" : `残り${subTasks.length - 6}個を表示`}
                 </motion.button>
               )}
             </div>
