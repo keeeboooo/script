@@ -8,7 +8,7 @@ import { getTodayStr } from "@/lib/date";
 import { createClient } from "@/lib/supabase/client";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ApiError, getUserFriendlyErrorMessage, getNetworkErrorMessage, parseApiError } from "@/lib/errors";
+import { ApiError, getUserFriendlyErrorMessage, NETWORK_ERROR_MESSAGE, parseApiError } from "@/lib/errors";
 
 const SingleEditResponseSchema = z.object({ task: BreakdownTaskSchema });
 
@@ -266,9 +266,7 @@ export function useTasks() {
         });
 
         if (!response.ok) {
-          const err = await parseApiError(response);
-          toast.error(getUserFriendlyErrorMessage(err.status, err.errorCode));
-          return null;
+          throw await parseApiError(response);
         }
 
         const parsed = BreakdownResponseSchema.safeParse(await response.json());
@@ -332,7 +330,11 @@ export function useTasks() {
         return parentId;
       } catch (error: unknown) {
         console.error("Failed to breakdown task:", error);
-        toast.error(getNetworkErrorMessage());
+        if (error instanceof ApiError) {
+          toast.error(getUserFriendlyErrorMessage(error.status, error.errorCode));
+        } else {
+          toast.error(NETWORK_ERROR_MESSAGE);
+        }
         return null;
       } finally {
         setIsLoading(false);

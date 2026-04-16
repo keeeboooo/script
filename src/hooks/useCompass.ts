@@ -9,7 +9,7 @@ import {
 } from "@/lib/schemas";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { ApiError, getUserFriendlyErrorMessage, getNetworkErrorMessage, parseApiError } from "@/lib/errors";
+import { ApiError, getUserFriendlyErrorMessage, NETWORK_ERROR_MESSAGE, parseApiError } from "@/lib/errors";
 
 export interface ChatMessage {
   id: string;
@@ -315,7 +315,7 @@ export function useCompass() {
         if (error instanceof ApiError) {
           toast.error(getUserFriendlyErrorMessage(error.status, error.errorCode));
         } else {
-          toast.error(getNetworkErrorMessage());
+          toast.error(NETWORK_ERROR_MESSAGE);
         }
       } finally {
         setIsChatLoading(false);
@@ -469,7 +469,7 @@ export function useCompass() {
       if (error instanceof ApiError) {
         toast.error(getUserFriendlyErrorMessage(error.status, error.errorCode));
       } else {
-        toast.error(getNetworkErrorMessage());
+        toast.error(NETWORK_ERROR_MESSAGE);
       }
     } finally {
       setIsPhilosophyLoading(false);
@@ -586,7 +586,7 @@ export function useCompass() {
         if (error instanceof ApiError) {
           toast.error(getUserFriendlyErrorMessage(error.status, error.errorCode));
         } else {
-          toast.error(getNetworkErrorMessage());
+          toast.error(NETWORK_ERROR_MESSAGE);
         }
         return null;
       } finally {

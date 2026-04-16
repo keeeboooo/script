@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
 import { formatScheduleBadge } from "@/lib/date";
 import { toast } from "sonner";
-import { ApiError, getUserFriendlyErrorMessage, getNetworkErrorMessage } from "@/lib/errors";
+import { ApiError, getUserFriendlyErrorMessage, NETWORK_ERROR_MESSAGE } from "@/lib/errors";
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'canceled';
 
@@ -112,7 +112,7 @@ export function TaskItem({
       if (error instanceof ApiError) {
         toast.error(getUserFriendlyErrorMessage(error.status, error.errorCode));
       } else {
-        toast.error(getNetworkErrorMessage());
+        toast.error(NETWORK_ERROR_MESSAGE);
       }
     } finally {
       setIsAIEditing(false);
