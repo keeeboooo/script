@@ -45,8 +45,8 @@ export function PhilosophyCard({
           <BookOpen className="w-5 h-5 text-muted-foreground" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold tracking-tight truncate">{philosophy.title}</h2>
+          <div className="flex items-center gap-2 min-w-0">
+            <h2 className="text-xl font-bold tracking-tight truncate flex-1 min-w-0">{philosophy.title}</h2>
             {philosophy.isActive && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-compass-subtle text-compass border border-compass-border/50 flex-shrink-0">
                 <Star className="w-2.5 h-2.5" />

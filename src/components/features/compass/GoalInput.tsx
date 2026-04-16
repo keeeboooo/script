@@ -77,10 +77,10 @@ export const GoalInput = forwardRef<HTMLDivElement, GoalInputProps>(
           )}
 
           {/* Timeframe selector + submit */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">達成期間:</span>
-              <div className="flex gap-1 p-1 rounded-xl glass">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-sm text-muted-foreground flex-shrink-0">達成期間:</span>
+              <div className="flex gap-1 p-1 rounded-xl glass overflow-x-auto">
                 {timeframes.map((tf) => (
                   <button
                     key={tf.value}
@@ -88,7 +88,7 @@ export const GoalInput = forwardRef<HTMLDivElement, GoalInputProps>(
                     onClick={() => setTimeframe(tf.value)}
                     aria-pressed={timeframe === tf.value}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors relative",
+                      "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors relative flex-shrink-0",
                       timeframe === tf.value
                         ? "text-compass"
                         : "text-muted-foreground hover:text-foreground/70"
@@ -115,7 +115,7 @@ export const GoalInput = forwardRef<HTMLDivElement, GoalInputProps>(
               whileTap={!goal.trim() || isLoading ? {} : { scale: 0.95 }}
               transition={springTransition}
               className={cn(
-                "p-3 rounded-xl flex items-center justify-center transition-colors",
+                "w-full sm:w-auto p-3 rounded-xl flex items-center justify-center transition-colors",
                 goal.trim() && !isLoading
                   ? "bg-compass text-compass-foreground hover:bg-compass-muted"
                   : "bg-secondary text-muted-foreground cursor-not-allowed"
