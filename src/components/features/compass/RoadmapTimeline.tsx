@@ -6,6 +6,7 @@ import { MapPin, ArrowRight, Check, Pencil, Trash2, Plus, X, Wand2, Send, Loader
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
 import { toast } from "sonner";
+import { ApiError, getUserFriendlyErrorMessage, NETWORK_ERROR_MESSAGE } from "@/lib/errors";
 import type { Milestone, Roadmap } from "@/hooks/useCompass";
 
 interface RoadmapTimelineProps {
@@ -201,7 +202,11 @@ export function RoadmapTimeline({
       setIsAIEditOpen(false);
       setAiInstruction("");
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "AI修正に失敗しました");
+      if (error instanceof ApiError) {
+        toast.error(getUserFriendlyErrorMessage(error.status, error.errorCode));
+      } else {
+        toast.error(NETWORK_ERROR_MESSAGE);
+      }
     } finally {
       setIsAIEditing(false);
     }
