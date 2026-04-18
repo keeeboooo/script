@@ -234,7 +234,7 @@ export default function CompassPage() {
             Roadmap
           </h2>
           <p className="text-sm text-muted-foreground">
-            最終ゴールから逆算して、今やるべきことを明確にします。
+            叶えたいことから逆算して、今やるべきことを明確にします。
           </p>
         </div>
 

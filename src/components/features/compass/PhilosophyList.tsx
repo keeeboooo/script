@@ -72,8 +72,8 @@ export function PhilosophyList({
               className="flex-1 min-w-0 text-left"
               aria-label={`「${philosophy.title}」を開く`}
             >
-              <div className="flex items-center gap-2">
-                <p className="font-semibold text-sm truncate">{philosophy.title}</p>
+              <div className="flex items-center gap-2 min-w-0">
+                <p className="font-semibold text-sm truncate flex-1 min-w-0">{philosophy.title}</p>
                 {philosophy.isActive && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-compass-subtle text-compass border border-compass-border/50 flex-shrink-0">
                     <Star className="w-2.5 h-2.5" />
@@ -81,12 +81,12 @@ export function PhilosophyList({
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs text-muted-foreground truncate max-w-[200px] italic">
+              <div className="flex items-center gap-2 mt-0.5 min-w-0">
+                <span className="text-xs text-muted-foreground truncate italic min-w-0">
                   &ldquo;{philosophy.lifeStatement}&rdquo;
                 </span>
               </div>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {philosophy.values.slice(0, 3).map((v) => (
                   <span
                     key={v.name}

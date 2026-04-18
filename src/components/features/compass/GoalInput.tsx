@@ -1,10 +1,19 @@
 "use client";
 
-import { useState, forwardRef } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef, forwardRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Target, Sparkles, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
+
+const PLACEHOLDER_EXAMPLES = [
+  "叶えたいことを入力...",
+  "「フリーランスで月30万円稼ぐ」",
+  "「行きたい国に全部行く」",
+  "「自分のカフェをオープンする」",
+  "「マンションを買う」",
+  "「ワインについて誰より詳しくなる」",
+] as const;
 
 interface GoalInputProps {
   onSubmit: (goal: string, timeframe: string) => void;
@@ -25,6 +34,15 @@ export const GoalInput = forwardRef<HTMLDivElement, GoalInputProps>(
   function GoalInput({ onSubmit, isLoading, hint }, ref) {
     const [goal, setGoal] = useState("");
     const [timeframe, setTimeframe] = useState("1年");
+    const [placeholderIndex, setPlaceholderIndex] = useState(0);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+      const interval = setInterval(() => {
+        setPlaceholderIndex((i) => (i + 1) % PLACEHOLDER_EXAMPLES.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -42,20 +60,41 @@ export const GoalInput = forwardRef<HTMLDivElement, GoalInputProps>(
           transition={{ ...springTransition, delay: 0.1 }}
         >
           {/* Goal text input */}
-          <div className="flex items-center glass-compass rounded-2xl p-2 focus-within:glass-compass-hover transition-colors">
+          <div
+            className="flex items-center glass-compass rounded-2xl p-2 focus-within:glass-compass-hover transition-colors cursor-text"
+            onClick={() => inputRef.current?.focus()}
+          >
             <div className="pl-3 pr-2 flex items-center justify-center text-compass/60">
               <Target className="w-5 h-5" />
             </div>
-            <input
-              type="text"
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-              placeholder="最終ゴールを入力 例: 「30歳までに独立してフリーランスエンジニアになる」"
-              aria-label="最終ゴール"
-              aria-busy={isLoading}
-              className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 py-3 text-base"
-              disabled={isLoading}
-            />
+            <div className="relative flex-1 py-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={goal}
+                onChange={(e) => setGoal(e.target.value)}
+                aria-label="叶えたいこと"
+                aria-busy={isLoading}
+                className="w-full bg-transparent border-none outline-none text-foreground text-sm"
+                disabled={isLoading}
+              />
+              {!goal && (
+                <div className="absolute inset-0 flex items-center pointer-events-none overflow-hidden">
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={placeholderIndex}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-sm text-muted-foreground/50 whitespace-nowrap"
+                    >
+                      {PLACEHOLDER_EXAMPLES[placeholderIndex]}
+                    </motion.span>
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Hint from philosophy */}
@@ -77,10 +116,10 @@ export const GoalInput = forwardRef<HTMLDivElement, GoalInputProps>(
           )}
 
           {/* Timeframe selector + submit */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">達成期間:</span>
-              <div className="flex gap-1 p-1 rounded-xl glass">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm text-muted-foreground flex-shrink-0">達成期間:</span>
+              <div className="flex gap-0.5 p-1 rounded-xl glass">
                 {timeframes.map((tf) => (
                   <button
                     key={tf.value}
@@ -88,7 +127,7 @@ export const GoalInput = forwardRef<HTMLDivElement, GoalInputProps>(
                     onClick={() => setTimeframe(tf.value)}
                     aria-pressed={timeframe === tf.value}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors relative",
+                      "px-2 py-1.5 rounded-lg text-sm font-medium transition-colors relative",
                       timeframe === tf.value
                         ? "text-compass"
                         : "text-muted-foreground hover:text-foreground/70"
