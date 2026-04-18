@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
+
+const PLACEHOLDER_EXAMPLES = [
+  "やりたいことを入力...",
+  "「うどんを手作りしてみたい」",
+  "「ワイン学習アプリを作りたい」",
+  "「部屋を断捨離する」",
+  "「英語のプレゼンを準備する」",
+] as const;
 
 interface TaskInputProps {
   onSubmit: (prompt: string) => void;
@@ -13,6 +21,15 @@ interface TaskInputProps {
 
 export function TaskInput({ onSubmit, isLoading }: TaskInputProps) {
   const [value, setValue] = useState("");
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((i) => (i + 1) % PLACEHOLDER_EXAMPLES.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,20 +48,39 @@ export function TaskInput({ onSubmit, isLoading }: TaskInputProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ ...springTransition, delay: 0.1 }}
+      onClick={() => inputRef.current?.focus()}
     >
       <div className="pl-4 pr-3 flex items-center justify-center text-muted-foreground">
         <ListTodo className="w-5 h-5" />
       </div>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder="やりたいことを入力..."
-        aria-label="新しいタスクを入力"
-        aria-busy={isLoading}
-        className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 py-3 text-base sm:text-lg"
-        disabled={isLoading}
-      />
+      <div className="relative flex-1 py-2 cursor-text">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          aria-label="新しいタスクを入力"
+          aria-busy={isLoading}
+          className="w-full bg-transparent border-none outline-none text-foreground text-sm"
+          disabled={isLoading}
+        />
+        {!value && (
+          <div className="absolute inset-0 flex items-center pointer-events-none overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={placeholderIndex}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.3 }}
+                className="text-sm text-muted-foreground/50 whitespace-nowrap"
+              >
+                {PLACEHOLDER_EXAMPLES[placeholderIndex]}
+              </motion.span>
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
       <div className="pr-2">
         <motion.button
           type="submit"
