@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Task, TaskStatus } from "@/components/features/task/TaskItem";
 import { v4 as uuidv4 } from "uuid";
 import { BreakdownResponseSchema, BreakdownTaskSchema } from "@/lib/schemas";
@@ -12,10 +12,14 @@ import { ApiError, getUserFriendlyErrorMessage, NETWORK_ERROR_MESSAGE, parseApiE
 
 const SingleEditResponseSchema = z.object({ task: BreakdownTaskSchema });
 
+export type UndoState = { taskId: string; previousStatus: TaskStatus };
+
 export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [undoState, setUndoState] = useState<UndoState | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -80,7 +84,24 @@ export function useTasks() {
     async (id: string) => {
       const task = tasks.find((t) => t.id === id);
       if (!task) return;
-      const newStatus: TaskStatus = task.status === "done" ? "todo" : "done";
+      const previousStatus = task.status;
+      const newStatus: TaskStatus = previousStatus === "done" ? "todo" : "done";
+
+      // Clear any in-flight undo timer
+      if (undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current);
+        undoTimerRef.current = null;
+      }
+
+      if (newStatus === "done") {
+        setUndoState({ taskId: id, previousStatus });
+        undoTimerRef.current = setTimeout(() => {
+          setUndoState(null);
+          undoTimerRef.current = null;
+        }, 5000);
+      } else {
+        setUndoState(null);
+      }
 
       setTasks((prev) =>
         prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
@@ -138,6 +159,20 @@ export function useTasks() {
     },
     [supabase]
   );
+
+  const undoComplete = useCallback(() => {
+    if (!undoState) return;
+    const { taskId, previousStatus } = undoState;
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+    setUndoState(null);
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status: previousStatus } : t))
+    );
+    void supabase.from("tasks").update({ status: previousStatus }).eq("id", taskId);
+  }, [undoState, supabase]);
 
   const deleteTask = useCallback(
     async (id: string) => {
@@ -574,10 +609,12 @@ export function useTasks() {
     todayTasks,
     scheduledTasks,
     somedayTasks,
+    undoState,
     breakdownTask,
     editBreakdown,
     toggleTask,
     changeTaskStatus,
+    undoComplete,
     deleteTask,
     editTask,
     reorderTasks,

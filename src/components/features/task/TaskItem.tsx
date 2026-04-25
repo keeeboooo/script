@@ -188,7 +188,7 @@ export function TaskItem({
           onClick={() => onToggle(task.id)}
           aria-label={task.status === "done" ? "タスクを未完了に戻す" : "タスクを完了する"}
           className={cn(
-            "mt-1 relative flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors",
+            "group/toggle mt-1 relative flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors",
             isSubTask ? "w-4 h-4" : "w-6 h-6"
           )}
           whileTap={{ scale: 0.8 }}
@@ -239,7 +239,12 @@ export function TaskItem({
               )}
             </>
           ) : task.status === "done" ? (
-            <CheckCircle2 className="w-full h-full text-foreground" />
+            <>
+              <CheckCircle2 className="w-full h-full text-foreground" />
+              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded-md border border-foreground/10 bg-background/90 px-2 py-0.5 text-xs font-medium text-muted-foreground opacity-0 backdrop-blur-sm transition-opacity duration-150 group-hover/toggle:opacity-100">
+                元に戻す
+              </span>
+            </>
           ) : (
             <Circle
               className={cn(
