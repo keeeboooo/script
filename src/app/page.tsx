@@ -6,7 +6,6 @@ import { TaskList } from "@/components/features/task/TaskList";
 import { useTasks } from "@/hooks/useTasks";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Sparkles } from "lucide-react";
-import { UndoToast } from "@/components/ui/undo-toast";
 
 const springTransition = { type: "spring" as const, stiffness: 260, damping: 20 };
 
@@ -26,8 +25,6 @@ export default function Home() {
     isLoading,
     isBreakingDown,
     completedCount,
-    undoState,
-    undoComplete,
     scheduleTask,
     unscheduleTask,
   } = useTasks();
@@ -117,8 +114,6 @@ export default function Home() {
           </>
         )}
       </div>
-
-      <UndoToast undoState={undoState} onUndo={undoComplete} />
     </div>
   );
 }

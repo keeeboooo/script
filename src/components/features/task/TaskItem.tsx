@@ -237,13 +237,20 @@ export function TaskItem({
                   <CheckCircle2 className="w-full h-full" />
                 </motion.div>
               )}
+              {task.status === "done" && !isSubTask && (
+                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded-md border border-foreground/10 bg-background/90 px-2 py-0.5 text-xs font-medium text-muted-foreground opacity-0 backdrop-blur-sm transition-opacity duration-150 group-hover/toggle:opacity-100">
+                  元に戻す
+                </span>
+              )}
             </>
           ) : task.status === "done" ? (
             <>
               <CheckCircle2 className="w-full h-full text-foreground" />
-              <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded-md border border-foreground/10 bg-background/90 px-2 py-0.5 text-xs font-medium text-muted-foreground opacity-0 backdrop-blur-sm transition-opacity duration-150 group-hover/toggle:opacity-100">
-                元に戻す
-              </span>
+              {!isSubTask && (
+                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded-md border border-foreground/10 bg-background/90 px-2 py-0.5 text-xs font-medium text-muted-foreground opacity-0 backdrop-blur-sm transition-opacity duration-150 group-hover/toggle:opacity-100">
+                  元に戻す
+                </span>
+              )}
             </>
           ) : (
             <Circle
