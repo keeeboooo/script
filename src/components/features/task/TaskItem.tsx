@@ -150,8 +150,6 @@ export function TaskItem({
 
   return (
     <motion.div
-      layout
-      layoutId={`task-${task.id}`}
       variants={itemVariants}
       initial="hidden"
       animate="show"

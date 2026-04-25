@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, ArrowRight, Check, Pencil, Trash2, Plus, X, Wand2, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { springTransition } from "@/lib/motion";
+import { springTransition, STAGGER_FAST } from "@/lib/motion";
 import { toast } from "sonner";
 import { ApiError, getUserFriendlyErrorMessage, NETWORK_ERROR_MESSAGE } from "@/lib/errors";
 import type { Milestone, Roadmap } from "@/hooks/useCompass";
@@ -23,7 +23,7 @@ const listVariants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.12 },
+    transition: { staggerChildren: STAGGER_FAST },
   },
 };
 

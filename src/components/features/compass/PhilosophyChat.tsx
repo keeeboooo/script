@@ -122,7 +122,7 @@ export function PhilosophyChat({
           </motion.div>
         )}
 
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence>
           {messages.map((message) => (
             <motion.div
               key={message.id}
