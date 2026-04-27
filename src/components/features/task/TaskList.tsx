@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Task, TaskItem, TaskStatus } from "./TaskItem";
 import { SchedulingPicker } from "./SchedulingPicker";
 import { cn } from "@/lib/utils";
-import { springTransition } from "@/lib/motion";
+import { springTransition, STAGGER_FAST } from "@/lib/motion";
 import { getTodayStr } from "@/lib/date";
 
 interface TaskListProps {
@@ -32,7 +32,7 @@ const listVariants = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: STAGGER_FAST,
     },
   },
 };
@@ -155,7 +155,7 @@ export function TaskList({
           </h2>
         </motion.div>
 
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence>
           {groupTasks.map((task) => (
             <TaskItem
               key={task.id}

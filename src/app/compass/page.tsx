@@ -122,10 +122,10 @@ export default function CompassPage() {
             // ─── セッションビュー ───────────────────────────────────────────
             <motion.div
               key="session"
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -24 }}
-              transition={springTransition}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               className="space-y-6"
             >
               <button
@@ -164,10 +164,10 @@ export default function CompassPage() {
             // ─── 一覧ビュー ─────────────────────────────────────────────────
             <motion.div
               key="list"
-              initial={{ opacity: 0, x: -24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 24 }}
-              transition={springTransition}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               className="space-y-4"
             >
               <div className="flex items-center justify-between">
@@ -293,10 +293,10 @@ export default function CompassPage() {
           {!isRoadmapLoading && selectedRoadmap ? (
             <motion.div
               key={`detail-${selectedRoadmap.id}`}
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -24 }}
-              transition={springTransition}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
               className="space-y-4"
             >
               <button
@@ -327,10 +327,10 @@ export default function CompassPage() {
           ) : !isRoadmapLoading && roadmaps.length > 0 ? (
             <motion.div
               key="list"
-              initial={{ opacity: 0, x: -24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 24 }}
-              transition={springTransition}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
             >
               <RoadmapList
                 roadmaps={roadmaps}
