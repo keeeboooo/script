@@ -15,6 +15,7 @@ interface PhilosophyChatProps {
   onResetChat: () => void;
   isChatLoading: boolean;
   isPhilosophyLoading: boolean;
+  currentSuggestions: string[];
 }
 
 // **text** の前後に半角スペースがない場合でも太字になるよう補完する
@@ -22,10 +23,28 @@ function normalizeMarkdown(content: string): string {
   return content.replace(/\*\*(.+?)\*\*/g, (_, inner) => ` **${inner}** `);
 }
 
+const STARTER_CHIPS = [
+  "最近ハマっていることを話したい",
+  "時間を忘れて没頭できることがある",
+  "自分の強みについて考えたい",
+  "人生でやりたいことを整理したい",
+];
+
 const messageVariants = {
   hidden: { opacity: 0, y: 12, scale: 0.96 },
   show: { opacity: 1, y: 0, scale: 1, transition: springTransition },
   exit: { opacity: 0, scale: 0.95, transition: { ...springTransition, duration: 0.15 } },
+};
+
+const chipVariants = {
+  hidden: { opacity: 0, y: 6, scale: 0.95 },
+  show: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { ...springTransition, delay: i * 0.05 },
+  }),
+  exit: { opacity: 0, scale: 0.92, transition: { duration: 0.1 } },
 };
 
 export function PhilosophyChat({
@@ -35,6 +54,7 @@ export function PhilosophyChat({
   onResetChat,
   isChatLoading,
   isPhilosophyLoading,
+  currentSuggestions,
 }: PhilosophyChatProps) {
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -63,7 +83,22 @@ export function PhilosophyChat({
     }
   };
 
+  const handleChipClick = (text: string) => {
+    if (isChatLoading) return;
+    onSendMessage(text);
+  };
+
   const canGeneratePhilosophy = messages.length >= 4 && !isChatLoading;
+
+  const remainingForPhilosophy = Math.max(0, 4 - messages.length);
+  const showProgressHint = messages.length < 4;
+
+  // Show quick-reply chips only after last AI message, not while loading
+  const lastMessage = messages[messages.length - 1];
+  const showQuickReplies =
+    !isChatLoading &&
+    currentSuggestions.length > 0 &&
+    lastMessage?.role === "assistant";
 
   return (
     <div className="flex flex-col h-full">
@@ -113,57 +148,108 @@ export function PhilosophyChat({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center h-full text-center py-12"
+            className="flex flex-col items-center justify-center h-full text-center py-8"
           >
             <MessageCircle className="w-8 h-8 text-compass/40 mb-4" />
-            <p className="text-muted-foreground text-sm max-w-xs">
-              AIコーチとの対話で、あなたの価値観を発掘しましょう。まずは何か話しかけてみてください。
+            <p className="text-muted-foreground text-sm max-w-xs mb-6">
+              AIコーチとの対話で、あなたの価値観を発掘しましょう。
             </p>
+            {/* Starter chips */}
+            <div className="flex flex-wrap justify-center gap-2 max-w-sm">
+              {STARTER_CHIPS.map((chip, i) => (
+                <motion.button
+                  key={chip}
+                  custom={i}
+                  variants={chipVariants}
+                  initial="hidden"
+                  animate="show"
+                  onClick={() => handleChipClick(chip)}
+                  whileHover={{ y: -2, scale: 1.02 }}
+                  whileTap={{ scale: 0.96 }}
+                  transition={springTransition}
+                  className="px-3 py-2 rounded-xl text-sm bg-compass-subtle text-compass border border-compass-border hover:bg-compass/15 transition-colors"
+                >
+                  {chip}
+                </motion.button>
+              ))}
+            </div>
           </motion.div>
         )}
 
         <AnimatePresence>
-          {messages.map((message) => (
-            <motion.div
-              key={message.id}
-              variants={messageVariants}
-              initial="hidden"
-              animate="show"
-              exit="exit"
-              className={cn(
-                "flex",
-                message.role === "user" ? "justify-end" : "justify-start"
-              )}
-            >
-              <div
-                className={cn(
-                  "max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed",
-                  message.role === "user"
-                    ? "bubble-user rounded-br-md whitespace-pre-wrap"
-                    : "bubble-assistant rounded-bl-md"
-                )}
-              >
-                {message.role === "user" ? (
-                  message.content
-                ) : (
-                  <ReactMarkdown
-                    components={{
-
-                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                      strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-                      em: ({ children }) => <em className="italic">{children}</em>,
-                      ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
-                      li: ({ children }) => <li>{children}</li>,
-                      code: ({ children }) => <code className="bg-foreground/10 rounded px-1 py-0.5 text-xs font-mono">{children}</code>,
-                    }}
+          {messages.map((message, index) => {
+            const isLastAssistant =
+              message.role === "assistant" && index === messages.length - 1;
+            return (
+              <div key={message.id}>
+                <motion.div
+                  variants={messageVariants}
+                  initial="hidden"
+                  animate="show"
+                  exit="exit"
+                  className={cn(
+                    "flex",
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed",
+                      message.role === "user"
+                        ? "bubble-user rounded-br-md whitespace-pre-wrap"
+                        : "bubble-assistant rounded-bl-md"
+                    )}
                   >
-                    {normalizeMarkdown(message.content)}
-                  </ReactMarkdown>
+                    {message.role === "user" ? (
+                      message.content
+                    ) : (
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                          em: ({ children }) => <em className="italic">{children}</em>,
+                          ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
+                          ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
+                          li: ({ children }) => <li>{children}</li>,
+                          code: ({ children }) => <code className="bg-foreground/10 rounded px-1 py-0.5 text-xs font-mono">{children}</code>,
+                        }}
+                      >
+                        {normalizeMarkdown(message.content)}
+                      </ReactMarkdown>
+                    )}
+                  </div>
+                </motion.div>
+
+                {/* Quick-reply chips below the last AI message */}
+                {isLastAssistant && showQuickReplies && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={springTransition}
+                    className="flex flex-wrap gap-2 mt-2 ml-1"
+                  >
+                    {currentSuggestions.map((suggestion, i) => (
+                      <motion.button
+                        key={`${suggestion}-${i}`}
+                        custom={i}
+                        variants={chipVariants}
+                        initial="hidden"
+                        animate="show"
+                        onClick={() => handleChipClick(suggestion)}
+                        whileHover={{ y: -1, scale: 1.02 }}
+                        whileTap={{ scale: 0.96 }}
+                        transition={springTransition}
+                        className="px-3 py-1.5 rounded-xl text-xs bg-compass-subtle text-compass border border-compass-border hover:bg-compass/15 transition-colors"
+                      >
+                        {suggestion}
+                      </motion.button>
+                    ))}
+                  </motion.div>
                 )}
               </div>
-            </motion.div>
-          ))}
+            );
+          })}
         </AnimatePresence>
 
         {/* Loading indicator */}
@@ -183,6 +269,21 @@ export function PhilosophyChat({
           </motion.div>
         )}
       </div>
+
+      {/* Progress hint */}
+      <AnimatePresence>
+        {showProgressHint && messages.length > 0 && (
+          <motion.p
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={springTransition}
+            className="text-xs text-muted-foreground/70 text-center mb-2"
+          >
+            あと{remainingForPhilosophy}回で哲学を生成できます
+          </motion.p>
+        )}
+      </AnimatePresence>
 
       {/* Input */}
       <form onSubmit={handleSubmit} className="flex items-end gap-2">

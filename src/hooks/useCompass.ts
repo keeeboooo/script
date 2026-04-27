@@ -144,6 +144,7 @@ export function useCompass() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const messagesRef = useRef<ChatMessage[]>([]);
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const [currentSuggestions, setCurrentSuggestions] = useState<string[]>([]);
 
   // 新規セッション中に philosophy_id なしで送ったメッセージをバッファ
   const pendingMessagesRef = useRef<ChatMessage[]>([]);
@@ -208,6 +209,7 @@ export function useCompass() {
     messagesRef.current = [];
     pendingMessagesRef.current = [];
     setMessages([]);
+    setCurrentSuggestions([]);
   }, []);
 
   const openPhilosophySession = useCallback(
@@ -216,6 +218,7 @@ export function useCompass() {
       messagesRef.current = [];
       pendingMessagesRef.current = [];
       setMessages([]);
+      setCurrentSuggestions([]);
 
       const { data: msgRows } = await supabase
         .from("compass_messages")
@@ -241,6 +244,7 @@ export function useCompass() {
     messagesRef.current = [];
     pendingMessagesRef.current = [];
     setMessages([]);
+    setCurrentSuggestions([]);
   }, []);
 
   // ─── Chat ─────────────────────────────────────────────────────────────────
@@ -261,6 +265,7 @@ export function useCompass() {
       const updated = [...messagesRef.current, userMessage];
       messagesRef.current = updated;
       setMessages(updated);
+      setCurrentSuggestions([]);
 
       if (editingPhilosophyId === NEW_SESSION) {
         // 新規セッション: philosophy_id が決まるまでバッファに積む
@@ -297,6 +302,7 @@ export function useCompass() {
           const withAssistant = [...messagesRef.current, assistantMessage];
           messagesRef.current = withAssistant;
           setMessages(withAssistant);
+          setCurrentSuggestions(parsed.data.suggestions ?? []);
 
           if (editingPhilosophyId === NEW_SESSION) {
             pendingMessagesRef.current = [...pendingMessagesRef.current, assistantMessage];
@@ -333,6 +339,7 @@ export function useCompass() {
     messagesRef.current = [];
     pendingMessagesRef.current = [];
     setMessages([]);
+    setCurrentSuggestions([]);
 
     if (editingPhilosophyId !== null && editingPhilosophyId !== NEW_SESSION) {
       await supabase
@@ -797,6 +804,7 @@ export function useCompass() {
     sendMessage,
     isChatLoading,
     resetChat,
+    currentSuggestions,
     // Roadmap
     roadmaps,
     generateRoadmap,
