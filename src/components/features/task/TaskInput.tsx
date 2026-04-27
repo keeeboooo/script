@@ -66,13 +66,13 @@ export function TaskInput({ onSubmit, isLoading }: TaskInputProps) {
         />
         {!value && (
           <div className="absolute inset-0 flex items-center pointer-events-none overflow-hidden">
-            <AnimatePresence mode="wait" initial={false}>
+            <AnimatePresence mode="wait">
               <motion.span
                 key={placeholderIndex}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.3 }}
                 className="text-sm text-muted-foreground/50 whitespace-nowrap"
               >
                 {PLACEHOLDER_EXAMPLES[placeholderIndex]}
