@@ -115,7 +115,7 @@ export function PhilosophyList({
                   whileTap={{ scale: 0.9 }}
                   transition={springTransition}
                   aria-label={`「${philosophy.title}」をアクティブにする`}
-                  className="p-2 rounded-lg text-muted-foreground hover:text-compass hover:bg-compass-subtle/50 transition-colors opacity-0 group-hover:opacity-100"
+                  className="p-2 rounded-lg text-muted-foreground hover:text-compass hover:bg-compass-subtle/50 transition-colors opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
                 >
                   <Star className="w-4 h-4" />
                 </motion.button>
@@ -126,7 +126,7 @@ export function PhilosophyList({
                 whileTap={{ scale: 0.9 }}
                 transition={springTransition}
                 aria-label={`「${philosophy.title}」を削除`}
-                className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
               >
                 <Trash2 className="w-4 h-4" />
               </motion.button>

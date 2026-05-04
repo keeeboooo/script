@@ -392,7 +392,7 @@ export function RoadmapTimeline({
                         whileTap={{ scale: 0.9 }}
                         transition={springTransition}
                         aria-label={`「${milestone.title}」を削除`}
-                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover/milestone:opacity-100"
+                        className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover/milestone:opacity-100 pointer-events-none group-hover/milestone:pointer-events-auto"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </motion.button>
@@ -428,7 +428,7 @@ export function RoadmapTimeline({
                                 onUpdateMilestone(milestone.id, { keyActions: updated });
                               }}
                               aria-label="このアクションを削除"
-                              className="opacity-0 group-hover/action:opacity-100 text-muted-foreground hover:text-destructive transition-all flex-shrink-0"
+                              className="opacity-0 group-hover/action:opacity-100 text-muted-foreground hover:text-destructive transition-all flex-shrink-0 pointer-events-none group-hover/action:pointer-events-auto"
                             >
                               <X className="w-3 h-3" />
                             </button>
