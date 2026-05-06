@@ -52,6 +52,7 @@ export const ChatRequestSchema = z.object({
 
 export const ChatResponseSchema = z.object({
   message: z.string(),
+  suggestions: z.array(z.string()).optional(),
 });
 
 // ─── Compass: Philosophy ──────────────────────────────────────────────────────

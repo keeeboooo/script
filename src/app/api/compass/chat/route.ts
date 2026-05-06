@@ -39,6 +39,13 @@ const systemPrompt = `
 - ユーザーが引き続き話しかけてきた場合は、まだ触れていない別のテーマ・角度から新たな質問を1つだけする。
 - すでに深掘りした内容は繰り返さない。新しい切り口（例：「起源」「反転質問」「他者との関係」）を選ぶ。
 - 2ターンごとに、改めて「これだけ話せましたね。哲学を生成してみませんか？」と促す。
+
+## 返答候補の出力（必須）
+毎回の返答の末尾に、必ず以下の形式の行を追加してください：
+SUGGESTIONS_JSON:["候補1","候補2","候補3"]
+- ユーザーが次に言いそうな自然な返答を2〜3個、短く（20文字以内）日本語で書く。
+- この行はユーザーには表示されないため、会話の流れを壊さない内容にする。
+- JSON形式を厳守し、ダブルクォートを使うこと。
 `;
 
 export async function POST(req: Request) {
@@ -72,9 +79,27 @@ export async function POST(req: Request) {
     const chat = model.startChat({ history });
 
     const result = await chat.sendMessage(lastMessage.content);
-    const text = result.response.text();
+    const rawText = result.response.text();
 
-    return NextResponse.json({ message: text });
+    const lines = rawText.split("\n");
+    const suggestionLineIndex = lines.findLastIndex((l: string) => l.startsWith("SUGGESTIONS_JSON:"));
+    let suggestions: string[] | undefined;
+    let message = rawText;
+
+    if (suggestionLineIndex !== -1) {
+      const jsonPart = lines[suggestionLineIndex].slice("SUGGESTIONS_JSON:".length).trim();
+      try {
+        const parsed: unknown = JSON.parse(jsonPart);
+        if (Array.isArray(parsed) && parsed.every((s) => typeof s === "string")) {
+          suggestions = parsed;
+        }
+      } catch {
+        // fallback: no suggestions
+      }
+      message = lines.slice(0, suggestionLineIndex).join("\n").trimEnd();
+    }
+
+    return NextResponse.json({ message, suggestions });
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid request", errorCode: "VALIDATION_ERROR" }, { status: 400 });

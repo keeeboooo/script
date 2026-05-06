@@ -33,6 +33,7 @@ export default function CompassPage() {
     sendMessage,
     isChatLoading,
     resetChat,
+    currentSuggestions,
     // Roadmap
     roadmaps,
     generateRoadmap,
@@ -144,6 +145,7 @@ export default function CompassPage() {
                   onResetChat={resetChat}
                   isChatLoading={isChatLoading}
                   isPhilosophyLoading={isPhilosophyLoading}
+                  currentSuggestions={currentSuggestions}
                 />
               </div>
 
