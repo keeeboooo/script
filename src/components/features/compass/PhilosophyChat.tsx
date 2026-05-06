@@ -28,7 +28,7 @@ const STARTER_CHIPS = [
   "時間を忘れて没頭できることがある",
   "自分の強みについて考えたい",
   "人生でやりたいことを整理したい",
-];
+] as const;
 
 const messageVariants = {
   hidden: { opacity: 0, y: 12, scale: 0.96 },
@@ -88,10 +88,10 @@ export function PhilosophyChat({
     onSendMessage(text);
   };
 
-  const canGeneratePhilosophy = messages.length >= 4 && !isChatLoading;
-
-  const remainingForPhilosophy = Math.max(0, 4 - messages.length);
-  const showProgressHint = messages.length < 4;
+  const userMessageCount = messages.filter((m) => m.role === "user").length;
+  const canGeneratePhilosophy = userMessageCount >= 4 && !isChatLoading;
+  const remainingForPhilosophy = Math.max(0, 4 - userMessageCount);
+  const showProgressHint = userMessageCount < 4;
 
   // Show quick-reply chips only after last AI message, not while loading
   const lastMessage = messages[messages.length - 1];
@@ -155,7 +155,7 @@ export function PhilosophyChat({
               AIコーチとの対話で、あなたの価値観を発掘しましょう。
             </p>
             {/* Starter chips */}
-            <div className="flex flex-wrap justify-center gap-2 max-w-sm">
+            <div className="flex flex-wrap justify-center gap-2 max-w-sm mb-3">
               {STARTER_CHIPS.map((chip, i) => (
                 <motion.button
                   key={chip}
@@ -166,7 +166,6 @@ export function PhilosophyChat({
                   onClick={() => handleChipClick(chip)}
                   whileHover={{ y: -2, scale: 1.02 }}
                   whileTap={{ scale: 0.96 }}
-                  transition={springTransition}
                   className="px-3 py-2 rounded-xl text-sm bg-compass-subtle text-compass border border-compass-border hover:bg-compass/15 transition-colors"
                 >
                   {chip}
@@ -231,7 +230,7 @@ export function PhilosophyChat({
                   >
                     {currentSuggestions.map((suggestion, i) => (
                       <motion.button
-                        key={`${suggestion}-${i}`}
+                        key={suggestion}
                         custom={i}
                         variants={chipVariants}
                         initial="hidden"
@@ -239,7 +238,6 @@ export function PhilosophyChat({
                         onClick={() => handleChipClick(suggestion)}
                         whileHover={{ y: -1, scale: 1.02 }}
                         whileTap={{ scale: 0.96 }}
-                        transition={springTransition}
                         className="px-3 py-1.5 rounded-xl text-xs bg-compass-subtle text-compass border border-compass-border hover:bg-compass/15 transition-colors"
                       >
                         {suggestion}
@@ -270,30 +268,33 @@ export function PhilosophyChat({
         )}
       </div>
 
-      {/* Progress hint */}
-      <AnimatePresence>
-        {showProgressHint && messages.length > 0 && (
-          <motion.p
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={springTransition}
-            className="text-xs text-muted-foreground/70 text-center mb-2"
-          >
-            あと{remainingForPhilosophy}回で哲学を生成できます
-          </motion.p>
-        )}
-      </AnimatePresence>
+      {/* Free input hint + progress hint */}
+      <div className="flex flex-col items-center gap-1 mb-2">
+        <p className="text-xs text-muted-foreground/50">または、入力欄から自由に話しかけてください</p>
+        <AnimatePresence>
+          {showProgressHint && messages.length > 0 && (
+            <motion.p
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={springTransition}
+              className="text-xs text-muted-foreground/70"
+            >
+              あと{remainingForPhilosophy}回で哲学を生成できます
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="flex items-end gap-2">
-        <div className="flex-1 flex items-end glass-compass rounded-2xl p-2 focus-within:glass-compass-hover transition-colors">
+      <form onSubmit={handleSubmit} className="flex items-end gap-2 min-w-0">
+        <div className="flex-1 min-w-0 flex items-end glass-compass rounded-2xl p-2 focus-within:glass-compass-hover transition-colors">
           <textarea
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="メッセージを入力..."
+            placeholder={messages.length === 0 ? "気軽に話しかけてみてください..." : "メッセージを入力..."}
             aria-label="AIコーチへのメッセージを入力"
             aria-busy={isChatLoading}
             rows={1}
