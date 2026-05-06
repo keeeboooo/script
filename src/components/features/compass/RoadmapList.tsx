@@ -140,7 +140,7 @@ export function RoadmapList({ roadmaps, onSelect, onDelete, onUpdateTitle }: Roa
                   whileTap={{ scale: 0.9 }}
                   transition={springTransition}
                   aria-label={`「${displayTitle}」のタイトルを編集`}
-                  className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+                  className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/40 transition-colors opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto"
                 >
                   <Pencil className="w-4 h-4" />
                 </motion.button>
@@ -150,7 +150,7 @@ export function RoadmapList({ roadmaps, onSelect, onDelete, onUpdateTitle }: Roa
                   whileTap={{ scale: 0.9 }}
                   transition={springTransition}
                   aria-label={`「${displayTitle}」を削除`}
-                  className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto"
+                  className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto"
                 >
                   <Trash2 className="w-4 h-4" />
                 </motion.button>
