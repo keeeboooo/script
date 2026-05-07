@@ -31,6 +31,7 @@ export const RawTaskSchema = z.object({
 export const BreakdownTaskSchema = z.object({
   title: z.string().max(20),
   estimatedTime: z.string().optional(),
+  estimatedMinutes: z.number().optional(),
   actionLink: z.string().optional(),
 });
 
