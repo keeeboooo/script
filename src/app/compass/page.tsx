@@ -39,6 +39,7 @@ export default function CompassPage() {
     generateRoadmap,
     isRoadmapLoading,
     markMilestoneImported,
+    completeMilestone,
     deleteRoadmap,
     updateRoadmap,
     addMilestone,
@@ -320,6 +321,9 @@ export default function CompassPage() {
                 }
                 onDeleteMilestone={(milestoneId) =>
                   deleteMilestone(selectedRoadmap.id, milestoneId)
+                }
+                onCompleteMilestone={(milestoneId, done) =>
+                  completeMilestone(selectedRoadmap.id, milestoneId, done)
                 }
                 onEditRoadmapWithAI={(roadmapId, instruction) =>
                   editRoadmapWithAI(roadmapId, instruction)

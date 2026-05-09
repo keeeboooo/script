@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ArrowRight, Check, Pencil, Trash2, Plus, X, Wand2, Send, Loader2 } from "lucide-react";
+import { MapPin, ArrowRight, Check, Pencil, Trash2, Plus, X, Wand2, Send, Loader2, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition, STAGGER_FAST } from "@/lib/motion";
 import { toast } from "sonner";
@@ -16,6 +16,7 @@ interface RoadmapTimelineProps {
   onAddMilestone: (milestone: Omit<Milestone, "id">) => void;
   onUpdateMilestone: (milestoneId: string, patch: Partial<Pick<Milestone, "period" | "title" | "description" | "keyActions">>) => void;
   onDeleteMilestone: (milestoneId: string) => void;
+  onCompleteMilestone?: (milestoneId: string, done: boolean) => Promise<void>;
   onEditRoadmapWithAI?: (roadmapId: string, instruction: string) => Promise<void>;
 }
 
@@ -187,6 +188,7 @@ export function RoadmapTimeline({
   onAddMilestone,
   onUpdateMilestone,
   onDeleteMilestone,
+  onCompleteMilestone,
   onEditRoadmapWithAI,
 }: RoadmapTimelineProps) {
   const [showAddForm, setShowAddForm] = useState(false);
@@ -312,6 +314,29 @@ export function RoadmapTimeline({
         )}
       </AnimatePresence>
 
+      {/* Progress bar */}
+      {roadmap.milestones.length > 0 && (() => {
+        const completedCount = roadmap.milestones.filter((m) => m.isCompleted).length;
+        const total = roadmap.milestones.length;
+        const pct = Math.round((completedCount / total) * 100);
+        return (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>進捗</span>
+              <span className="font-medium text-compass">{completedCount}/{total} 完了 {pct}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-compass/10 overflow-hidden">
+              <motion.div
+                className="h-full rounded-full bg-compass"
+                initial={{ width: 0 }}
+                animate={{ width: `${pct}%` }}
+                transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              />
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Timeline */}
       <motion.div
         variants={listVariants}
@@ -330,18 +355,27 @@ export function RoadmapTimeline({
               <motion.div
                 key={milestone.id}
                 variants={itemVariants}
-                className="relative flex gap-4 pb-8 last:pb-0 group/milestone"
+                className={cn(
+                  "relative flex gap-4 pb-8 last:pb-0 group/milestone transition-opacity",
+                  milestone.isCompleted && "opacity-60 grayscale-[40%]"
+                )}
               >
                 {/* Timeline dot */}
                 <div
                   className={cn(
                     "relative z-10 flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors",
-                    isLast
-                      ? "bg-compass/20 border-compass text-compass"
-                      : "bg-background border-compass/30 text-compass/60"
+                    milestone.isCompleted
+                      ? "bg-compass border-compass text-compass-foreground"
+                      : isLast
+                        ? "bg-compass/20 border-compass text-compass"
+                        : "bg-background border-compass/30 text-compass/60"
                   )}
                 >
-                  <span className="text-xs font-bold">{index + 1}</span>
+                  {milestone.isCompleted ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <span className="text-xs font-bold">{index + 1}</span>
+                  )}
                 </div>
 
                 {/* Content */}
@@ -362,6 +396,30 @@ export function RoadmapTimeline({
                     </div>
 
                     <div className="flex items-center gap-1 flex-shrink-0">
+                      {/* Complete toggle button */}
+                      {onCompleteMilestone && (
+                        <motion.button
+                          onClick={() => void onCompleteMilestone(milestone.id, !milestone.isCompleted)}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                          aria-label={milestone.isCompleted ? `「${milestone.title}」を未完了に戻す` : `「${milestone.title}」を完了にする`}
+                          aria-pressed={milestone.isCompleted}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                            milestone.isCompleted
+                              ? "bg-compass/20 text-compass border border-compass/30"
+                              : "bg-secondary/30 text-foreground hover:bg-compass/10 hover:text-compass border border-border/40"
+                          )}
+                        >
+                          {milestone.isCompleted ? (
+                            <><Check className="w-3 h-3" />完了</>
+                          ) : (
+                            <><Circle className="w-3 h-3" />完了にする</>
+                          )}
+                        </motion.button>
+                      )}
+
                       {/* Import to Engine button */}
                       <motion.button
                         onClick={() => onImportMilestone(milestone)}

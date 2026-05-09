@@ -124,6 +124,29 @@ export function useTasks() {
           }
         }
       }
+
+      // linked_milestone_id があるタスクが done になった時、同じマイルストーンに紐づく全タスクが完了なら Toast 通知
+      if (newStatus === "done" && task.linkedMilestoneId) {
+        const linkedTasks = tasks.filter(
+          (t) => t.linkedMilestoneId === task.linkedMilestoneId && t.id !== id
+        );
+        const allLinkedDone = linkedTasks.every(
+          (t) => t.status === "done" || t.status === "canceled"
+        );
+        if (allLinkedDone) {
+          toast.success(
+            `マイルストーン「${task.linkedGoal?.split(" › ")[1] ?? ""}」のタスクが全て完了！`,
+            {
+              description: "Compassでマイルストーンを完了にしましょう",
+              action: {
+                label: "Compassを開く",
+                onClick: () => { window.location.href = "/compass"; },
+              },
+              duration: 8000,
+            }
+          );
+        }
+      }
     },
     [tasks, supabase]
   );
