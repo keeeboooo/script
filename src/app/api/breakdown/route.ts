@@ -29,11 +29,19 @@ Respond STRICTLY with a JSON object matching this schema, without markdown forma
     {
       "title": "動詞で始まる20文字以内の行動（日本語）",
       "estimatedTime": "15分",
+      "estimatedMinutes": 15,
       "actionLink": "https://example.com/useful-link"
     }
   ],
-  "firstStep": "今すぐできる最小の着手行動（1文で、動詞で始める）"
+  "firstStep": "今すぐ物理的に始められる最小の着手行動（1文、動詞で始める）"
 }
+
+Instructions for estimatedTime:
+- Provide a human-readable estimate (e.g. "15分", "1時間", "30分").
+
+Instructions for estimatedMinutes:
+- Provide the same estimate as an integer number of minutes (e.g. 15, 60, 30).
+- This is required for every task.
 
 Instructions for actionLink:
 - If a task involves buying something, provide an Amazon or specific store search link.
@@ -41,9 +49,11 @@ Instructions for actionLink:
 - ONLY provide an actionLink if it's genuinely useful for immediate execution. Otherwise, optionally omit it.
 
 Instructions for firstStep:
-- Identify the single smallest action that would get the user started right now.
-- It should take less than 5 minutes and create momentum.
-- Write it as a concrete verb phrase in Japanese (e.g. "レシピ動画を1本だけ開いて見てみる").
+- CRITICAL: The firstStep must be a PHYSICAL ACTION the user can start within 2 minutes right now.
+- It must be the absolute minimum step — not "prepare" or "plan", but a single concrete physical action.
+- BAD examples: "うどん作りの準備をする", "材料を確認する"
+- GOOD examples: "Amazonで『麺棒』と検索して商品ページを開く", "テキストエディタを開いて要件を1行書く", "YouTubeで『手打ちうどん 初心者』と検索する"
+- Write it as a concrete verb phrase in Japanese with a specific tool/site/object named.
 `;
 
 export async function POST(req: Request) {

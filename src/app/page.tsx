@@ -25,6 +25,7 @@ export default function Home() {
     isLoading,
     isBreakingDown,
     completedCount,
+    streakDays,
     scheduleTask,
     unscheduleTask,
   } = useTasks();
@@ -86,6 +87,7 @@ export default function Home() {
               onUnscheduleTask={unscheduleTask}
               newlyBreakdownTaskId={lastBreakdownTaskId}
               onDismissSchedulingPrompt={() => setLastBreakdownTaskId(null)}
+              streakDays={streakDays}
             />
 
             {/* Bulk action bar */}

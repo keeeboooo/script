@@ -16,6 +16,7 @@ export function useTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [streakDays, setStreakDays] = useState(0);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -27,6 +28,7 @@ export function useTasks() {
       title: string;
       status: string;
       estimated_time_label: string | null;
+      estimated_minutes: number | null;
       action_link: string | null;
       parent_id: string | null;
       linked_goal: string | null;
@@ -41,6 +43,7 @@ export function useTasks() {
       title: row.title,
       status: row.status as TaskStatus,
       estimatedTime: row.estimated_time_label ?? undefined,
+      estimatedMinutes: row.estimated_minutes ?? undefined,
       actionLink: row.action_link ?? undefined,
       parentId: row.parent_id ?? undefined,
       linkedGoal: row.linked_goal ?? undefined,
@@ -74,6 +77,62 @@ export function useTasks() {
     fetchTasks();
   }, [rowToTask, supabase]);
 
+  // ─── Streak ────────────────────────────────────────────────────────────────
+
+  const fetchStreak = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("daily_completion_log")
+      .select("log_date")
+      .eq("user_id", user.id)
+      .order("log_date", { ascending: false })
+      .limit(365);
+
+    if (!data || data.length === 0) {
+      setStreakDays(0);
+      return;
+    }
+
+    const LogRowSchema = z.object({ log_date: z.string() });
+
+    const today = getTodayStr();
+    let streak = 0;
+    let cursor = today;
+
+    for (const row of data) {
+      const parsed = LogRowSchema.safeParse(row);
+      if (!parsed.success) break;
+      if (parsed.data.log_date === cursor) {
+        streak++;
+        const [y, m, d] = cursor.split("-").map(Number);
+        const prev = new Date(Date.UTC(y!, m! - 1, d! - 1));
+        cursor = prev.toISOString().split("T")[0] ?? cursor;
+      } else {
+        break;
+      }
+    }
+
+    setStreakDays(streak);
+  }, [supabase]);
+
+  useEffect(() => {
+    void fetchStreak();
+  }, [fetchStreak]);
+
+  const recordCompletionToday = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const today = getTodayStr();
+    await supabase
+      .from("daily_completion_log")
+      .upsert({ user_id: user.id, log_date: today }, { onConflict: "user_id,log_date" });
+
+    void fetchStreak();
+  }, [supabase, fetchStreak]);
+
   // ─── CRUD ───────────────────────────────────────────────────────────────────
 
   const toggleTask = useCallback(
@@ -90,6 +149,10 @@ export function useTasks() {
         .from("tasks")
         .update({ status: newStatus })
         .eq("id", id);
+
+      if (newStatus === "done") {
+        void recordCompletionToday();
+      }
 
       // サブタスクを done にした時、全兄弟が done/canceled なら親も自動完了
       // 注: siblings は setTasks 前の tasks を参照するため、対象タスク自身はまだ "done" でない状態で評価される
@@ -125,7 +188,7 @@ export function useTasks() {
         }
       }
     },
-    [tasks, supabase]
+    [tasks, supabase, recordCompletionToday]
   );
 
   const changeTaskStatus = useCallback(
@@ -135,8 +198,12 @@ export function useTasks() {
       );
 
       await supabase.from("tasks").update({ status }).eq("id", id);
+
+      if (status === "done") {
+        void recordCompletionToday();
+      }
     },
-    [supabase]
+    [supabase, recordCompletionToday]
   );
 
   const deleteTask = useCallback(
@@ -338,6 +405,7 @@ export function useTasks() {
           title: t.title,
           status: "todo" as const,
           estimated_time_label: t.estimatedTime ?? null,
+          estimated_minutes: t.estimatedMinutes ?? null,
           action_link: t.actionLink ?? null,
           parent_id: parentId,
           position: i + 1,
@@ -356,6 +424,7 @@ export function useTasks() {
           title: t.title,
           status: "todo",
           estimatedTime: t.estimated_time_label ?? undefined,
+          estimatedMinutes: t.estimated_minutes ?? undefined,
           actionLink: t.action_link ?? undefined,
           parentId,
         }));
@@ -571,6 +640,7 @@ export function useTasks() {
     isLoading: isLoading || isFetching,
     isBreakingDown: isLoading,
     completedCount,
+    streakDays,
     todayTasks,
     scheduledTasks,
     somedayTasks,
