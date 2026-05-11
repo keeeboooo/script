@@ -95,19 +95,20 @@ export function useTasks() {
       return;
     }
 
+    const LogRowSchema = z.object({ log_date: z.string() });
+
     const today = getTodayStr();
     let streak = 0;
     let cursor = today;
 
     for (const row of data) {
-      const logDate = typeof row === "object" && row !== null && "log_date" in row && typeof (row as Record<string, unknown>).log_date === "string"
-        ? (row as Record<string, string>).log_date
-        : null;
-      if (logDate === cursor) {
+      const parsed = LogRowSchema.safeParse(row);
+      if (!parsed.success) break;
+      if (parsed.data.log_date === cursor) {
         streak++;
-        const d = new Date(cursor);
-        d.setDate(d.getDate() - 1);
-        cursor = d.toISOString().split("T")[0] ?? cursor;
+        const [y, m, d] = cursor.split("-").map(Number);
+        const prev = new Date(Date.UTC(y!, m! - 1, d! - 1));
+        cursor = prev.toISOString().split("T")[0] ?? cursor;
       } else {
         break;
       }
@@ -187,7 +188,7 @@ export function useTasks() {
         }
       }
     },
-    [tasks, supabase]
+    [tasks, supabase, recordCompletionToday]
   );
 
   const changeTaskStatus = useCallback(
@@ -197,8 +198,12 @@ export function useTasks() {
       );
 
       await supabase.from("tasks").update({ status }).eq("id", id);
+
+      if (status === "done") {
+        void recordCompletionToday();
+      }
     },
-    [supabase]
+    [supabase, recordCompletionToday]
   );
 
   const deleteTask = useCallback(

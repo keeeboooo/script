@@ -23,7 +23,7 @@ export function StreakBadge({ days, className }: StreakBadgeProps) {
       )}
       whileHover={{ y: -1 }}
       transition={springTransition}
-      title={isActive ? `${days}日連続でタスクを完了しています` : "今日タスクを完了してStreakを始めよう"}
+      title={isActive ? `${days}日連続でタスクを完了しています` : "今日タスクを完了して連続記録を始めよう"}
     >
       <span className={cn("text-sm", isActive ? "opacity-100" : "opacity-40")}>🔥</span>
       {isActive ? (
@@ -32,7 +32,7 @@ export function StreakBadge({ days, className }: StreakBadgeProps) {
           <span className="text-muted-foreground ml-0.5">日連続</span>
         </span>
       ) : (
-        <span>Streakを始めよう</span>
+        <span>連続記録を始めよう</span>
       )}
     </motion.div>
   );

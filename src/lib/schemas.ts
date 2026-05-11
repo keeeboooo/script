@@ -103,6 +103,22 @@ export const RoadmapRequestSchema = z.object({
   }).optional(),
 });
 
+// ─── Nudge ────────────────────────────────────────────────────────────────────
+
+export const NudgeSuggestionSchema = z.object({
+  taskId: z.string(),
+  reason: z.string(),
+});
+
+export const NudgeResponseSchema = z.object({
+  suggestions: z.array(NudgeSuggestionSchema),
+});
+
+export const NudgeCacheSchema = z.object({
+  date: z.string(),
+  suggestions: z.array(NudgeSuggestionSchema),
+});
+
 // ─── User ─────────────────────────────────────────────────────────────────────
 
 export const DisplayNameSchema = z.object({

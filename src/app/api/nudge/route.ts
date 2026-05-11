@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getErrorMessage } from "@/lib/utils";
+import { NudgeResponseSchema } from "@/lib/schemas";
 
 const NudgeRequestTaskSchema = z.object({
   id: z.string(),
@@ -13,15 +14,6 @@ const NudgeRequestTaskSchema = z.object({
 
 const NudgeRequestSchema = z.object({
   tasks: z.array(NudgeRequestTaskSchema).min(1),
-});
-
-const NudgeSuggestionSchema = z.object({
-  taskId: z.string(),
-  reason: z.string().max(40),
-});
-
-const NudgeResponseSchema = z.object({
-  suggestions: z.array(NudgeSuggestionSchema).max(3),
 });
 
 const systemPrompt = `

@@ -1,20 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Task, TaskItem, TaskStatus } from "./TaskItem";
 import { springTransition } from "@/lib/motion";
-import { z } from "zod";
+import { NudgeCacheSchema, NudgeResponseSchema } from "@/lib/schemas";
+import { getTodayStr } from "@/lib/date";
 
-const NudgeSuggestionSchema = z.object({
-  taskId: z.string(),
-  reason: z.string(),
-});
-
-const NudgeResponseSchema = z.object({
-  suggestions: z.array(NudgeSuggestionSchema),
-});
+const CACHE_KEY = "smart_nudge_cache";
 
 interface SmartNudgeSuggestion {
   task: Task;
@@ -33,6 +27,41 @@ interface SmartNudgeProps {
   onUnscheduleTask?: (id: string) => void;
 }
 
+function loadCache(allTasks: Task[]): SmartNudgeSuggestion[] | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = NudgeCacheSchema.safeParse(JSON.parse(raw));
+    if (!parsed.success || parsed.data.date !== getTodayStr()) return null;
+
+    const resolved = parsed.data.suggestions
+      .map((s) => {
+        const task = allTasks.find((t) => t.id === s.taskId);
+        if (!task) return null;
+        return { task, reason: s.reason };
+      })
+      .filter((s): s is SmartNudgeSuggestion => s !== null);
+
+    return resolved.length > 0 ? resolved : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveCache(suggestions: SmartNudgeSuggestion[]) {
+  try {
+    localStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({
+        date: getTodayStr(),
+        suggestions: suggestions.map((s) => ({ taskId: s.task.id, reason: s.reason })),
+      })
+    );
+  } catch {
+    // localStorage unavailable — ignore
+  }
+}
+
 export function SmartNudge({
   incompleteTasks,
   allTasks,
@@ -47,7 +76,7 @@ export function SmartNudge({
   const [suggestions, setSuggestions] = useState<SmartNudgeSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const [taskCountAtLastFetch, setTaskCountAtLastFetch] = useState(0);
+  const initialized = useRef(false);
 
   const fetchNudge = useCallback(async () => {
     if (incompleteTasks.length === 0) return;
@@ -86,7 +115,7 @@ export function SmartNudge({
         .filter((s): s is SmartNudgeSuggestion => s !== null);
 
       setSuggestions(resolved);
-      setTaskCountAtLastFetch(incompleteTasks.length);
+      saveCache(resolved);
     } catch {
       // silently fail — nudge is non-critical
     } finally {
@@ -94,16 +123,22 @@ export function SmartNudge({
     }
   }, [incompleteTasks, allTasks]);
 
-  // Fetch on mount and when task count changes meaningfully (completion events)
+  // マウント時のみ: キャッシュがあれば使い、なければAPIを叩く
   useEffect(() => {
-    const countChanged = Math.abs(incompleteTasks.length - taskCountAtLastFetch) >= 1;
-    if (suggestions.length === 0 || countChanged) {
+    if (initialized.current) return;
+    initialized.current = true;
+
+    const cached = loadCache(allTasks);
+    if (cached) {
+      setSuggestions(cached);
+    } else {
       void fetchNudge();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [incompleteTasks.length]);
+  // allTasksとfetchNudgeはマウント時の値のみ使うため依存に含めない
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Filter out completed tasks from current suggestions
+  // 完了済みタスクをリアルタイムに除外
   const activeSuggestions = suggestions.filter(
     (s) => s.task.status !== "done" && s.task.status !== "canceled" && incompleteTasks.some((t) => t.id === s.task.id)
   );
@@ -175,7 +210,7 @@ export function SmartNudge({
               onEditBreakdown={onEditBreakdown}
               onScheduleTask={onScheduleTask}
               onUnscheduleTask={onUnscheduleTask}
-              isSubTask
+              isSubTask={!!s.task.parentId}
             />
             <p className="text-xs text-muted-foreground/70 pl-3 pb-0.5">
               {s.reason}
