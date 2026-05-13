@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Task, TaskStatus } from "@/components/features/task/TaskItem";
 import { v4 as uuidv4 } from "uuid";
 import { BreakdownResponseSchema, BreakdownTaskSchema } from "@/lib/schemas";
@@ -19,6 +19,12 @@ export function useTasks() {
   const [streakDays, setStreakDays] = useState(0);
 
   const supabase = useMemo(() => createClient(), []);
+
+  const pendingDeletesRef = useRef<Map<string, {
+    tasksToRestore: Task[];
+    insertIndex: number;
+    timeoutId: ReturnType<typeof setTimeout>;
+  }>>(new Map());
 
   // ─── DB rows → Task ────────────────────────────────────────────────────────
 
@@ -207,12 +213,38 @@ export function useTasks() {
   );
 
   const deleteTask = useCallback(
-    async (id: string) => {
-      setTasks((prev) => prev.filter((t) => t.id !== id));
-      await supabase.from("tasks").delete().eq("id", id);
+    (id: string) => {
+      setTasks((prev) => {
+        const insertIndex = prev.findIndex((t) => t.id === id);
+        const tasksToRestore = prev.filter((t) => t.id === id || t.parentId === id);
+
+        const timeoutId = setTimeout(async () => {
+          pendingDeletesRef.current.delete(id);
+          const idsToDelete = tasksToRestore.map((t) => t.id);
+          await supabase.from("tasks").delete().in("id", idsToDelete);
+        }, 5000);
+
+        pendingDeletesRef.current.set(id, { tasksToRestore, insertIndex, timeoutId });
+
+        return prev.filter((t) => t.id !== id && t.parentId !== id);
+      });
     },
     [supabase]
   );
+
+  const undoDelete = useCallback((id: string) => {
+    const pending = pendingDeletesRef.current.get(id);
+    if (!pending) return;
+
+    clearTimeout(pending.timeoutId);
+    pendingDeletesRef.current.delete(id);
+
+    setTasks((prev) => {
+      const result = [...prev];
+      result.splice(pending.insertIndex, 0, ...pending.tasksToRestore);
+      return result;
+    });
+  }, []);
 
   const editTask = useCallback(
     async (id: string, newTitle: string) => {
@@ -649,6 +681,7 @@ export function useTasks() {
     toggleTask,
     changeTaskStatus,
     deleteTask,
+    undoDelete,
     editTask,
     reorderTasks,
     clearCompleted,
