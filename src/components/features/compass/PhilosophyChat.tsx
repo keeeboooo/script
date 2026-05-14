@@ -114,14 +114,14 @@ export function PhilosophyChat({
               onClick={onGeneratePhilosophy}
               disabled={isPhilosophyLoading}
               aria-busy={isPhilosophyLoading}
-              aria-label={isPhilosophyLoading ? "哲学を生成中" : "あなたの哲学を生成"}
+              aria-label={isPhilosophyLoading ? "軸を生成中" : "あなたの軸を生成"}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium bg-compass-subtle text-compass border border-compass-border hover:bg-compass/20 transition-colors disabled:opacity-50"
               whileHover={{ y: -1 }}
               whileTap={{ scale: 0.97 }}
               transition={springTransition}
             >
               <BookOpen className="w-4 h-4" />
-              {isPhilosophyLoading ? "生成中..." : "哲学を生成"}
+              {isPhilosophyLoading ? "生成中..." : "軸を生成"}
             </motion.button>
           )}
           {messages.length > 0 && (
@@ -280,7 +280,7 @@ export function PhilosophyChat({
               transition={springTransition}
               className="text-xs text-muted-foreground/70"
             >
-              あと{remainingForPhilosophy}回で哲学を生成できます
+              あと{remainingForPhilosophy}回で軸を生成できます
             </motion.p>
           )}
         </AnimatePresence>
