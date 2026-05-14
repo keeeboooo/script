@@ -110,7 +110,7 @@ export const GoalInput = forwardRef<HTMLDivElement, GoalInputProps>(
                 className="text-sm text-compass/60 italic line-clamp-2"
                 title={hint}
               >
-                あなたの哲学: &ldquo;{hint}&rdquo;
+                あなたの軸: &ldquo;{hint}&rdquo;
               </p>
             </motion.div>
           )}
