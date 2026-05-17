@@ -127,6 +127,13 @@ export function useTasks() {
     void fetchStreak();
   }, [fetchStreak]);
 
+  useEffect(() => {
+    const ref = pendingDeletesRef.current;
+    return () => {
+      ref.forEach(({ timeoutId }) => clearTimeout(timeoutId));
+    };
+  }, []);
+
   const recordCompletionToday = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -214,20 +221,30 @@ export function useTasks() {
 
   const deleteTask = useCallback(
     (id: string) => {
+      let tasksToRestore: Task[] = [];
+      let insertIndex = 0;
+
       setTasks((prev) => {
-        const insertIndex = prev.findIndex((t) => t.id === id);
-        const tasksToRestore = prev.filter((t) => t.id === id || t.parentId === id);
-
-        const timeoutId = setTimeout(async () => {
-          pendingDeletesRef.current.delete(id);
-          const idsToDelete = tasksToRestore.map((t) => t.id);
-          await supabase.from("tasks").delete().in("id", idsToDelete);
-        }, 5000);
-
-        pendingDeletesRef.current.set(id, { tasksToRestore, insertIndex, timeoutId });
-
+        insertIndex = prev.findIndex((t) => t.id === id);
+        tasksToRestore = prev.filter((t) => t.id === id || t.parentId === id);
         return prev.filter((t) => t.id !== id && t.parentId !== id);
       });
+
+      const timeoutId = setTimeout(async () => {
+        pendingDeletesRef.current.delete(id);
+        const idsToDelete = tasksToRestore.map((t) => t.id);
+        const { error } = await supabase.from("tasks").delete().in("id", idsToDelete);
+        if (error) {
+          toast.error("削除に失敗しました。もう一度お試しください。");
+          setTasks((prev) => {
+            const result = [...prev];
+            result.splice(insertIndex, 0, ...tasksToRestore);
+            return result;
+          });
+        }
+      }, 5000);
+
+      pendingDeletesRef.current.set(id, { tasksToRestore, insertIndex, timeoutId });
     },
     [supabase]
   );
