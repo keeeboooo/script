@@ -58,6 +58,7 @@ export function RoadmapList({ roadmaps, onSelect, onDelete, onUpdateTitle }: Roa
     >
       {roadmaps.map((roadmap) => {
         const importedCount = roadmap.milestones.filter((m) => m.isImported).length;
+        const completedCount = roadmap.milestones.filter((m) => m.isCompleted).length;
         const totalCount = roadmap.milestones.length;
         const isEditing = editingId === roadmap.id;
         const displayTitle = roadmap.title ?? roadmap.goal;
@@ -112,12 +113,20 @@ export function RoadmapList({ roadmaps, onSelect, onDelete, onUpdateTitle }: Roa
                       aria-label={`「${displayTitle}」のロードマップを開く`}
                     >
                       <p className="font-semibold text-sm truncate">{displayTitle}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className="text-xs text-muted-foreground">{roadmap.timeframe}</span>
                         <span className="text-xs text-muted-foreground">·</span>
                         <span className="text-xs text-muted-foreground">
                           {formatCreatedAt(roadmap.createdAt)}
                         </span>
+                        {totalCount > 0 && (
+                          <>
+                            <span className="text-xs text-muted-foreground">·</span>
+                            <span className={completedCount > 0 ? "text-xs text-compass font-medium" : "text-xs text-muted-foreground"}>
+                              {completedCount}/{totalCount} 完了
+                            </span>
+                          </>
+                        )}
                         {importedCount > 0 && (
                           <>
                             <span className="text-xs text-muted-foreground">·</span>
