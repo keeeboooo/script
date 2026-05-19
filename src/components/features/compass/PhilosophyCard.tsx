@@ -60,7 +60,7 @@ export function PhilosophyCard({
             onClick={onDelete}
             whileTap={{ scale: 0.9 }}
             transition={springTransition}
-            aria-label="この哲学を削除"
+            aria-label="この軸を削除"
             className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
           >
             <Trash2 className="w-4 h-4" />
@@ -161,7 +161,7 @@ export function PhilosophyCard({
             className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-compass-border/50 text-compass/70 text-sm hover:bg-compass-subtle/50 transition-colors"
           >
             <Star className="w-4 h-4" />
-            この哲学をアクティブにする
+            この軸をアクティブにする
           </motion.button>
         )}
         {onCreateRoadmap && (
@@ -172,7 +172,7 @@ export function PhilosophyCard({
             transition={springTransition}
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl glass-compass border border-compass-border/50 text-compass text-sm font-medium hover:glass-compass-hover transition-colors"
           >
-            この哲学をもとにロードマップを作る
+            この軸をもとにロードマップを作る
             <ArrowRight className="w-4 h-4" />
           </motion.button>
         )}

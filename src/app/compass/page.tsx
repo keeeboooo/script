@@ -132,7 +132,7 @@ export default function CompassPage() {
               <button
                 onClick={closePhilosophySession}
                 className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="哲学一覧に戻る"
+                aria-label="軸一覧に戻る"
               >
                 ← 一覧に戻る
               </button>
@@ -176,7 +176,7 @@ export default function CompassPage() {
                 <div className="space-y-0.5">
                   <h2 className="font-display text-lg font-bold tracking-tight">My Philosophy</h2>
                   <p className="text-xs text-muted-foreground">
-                    対話から生まれた、あなた自身の哲学
+                    対話から生まれた、あなた自身の軸
                   </p>
                 </div>
                 <motion.button
@@ -187,7 +187,7 @@ export default function CompassPage() {
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl glass-compass border border-compass-border/50 text-compass text-sm font-medium hover:glass-compass-hover transition-colors"
                 >
                   <Plus className="w-4 h-4" />
-                  新しい哲学
+                  新しい軸
                 </motion.button>
               </div>
 
@@ -198,7 +198,7 @@ export default function CompassPage() {
                   className="glass-compass rounded-2xl p-10 text-center space-y-3"
                 >
                   <p className="text-muted-foreground text-sm">
-                    まだ哲学がありません
+                    まだ軸がありません
                   </p>
                   <motion.button
                     onClick={startNewPhilosophySession}
@@ -208,7 +208,7 @@ export default function CompassPage() {
                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-compass-subtle text-compass text-sm font-medium border border-compass-border/50 hover:bg-compass/20 transition-colors"
                   >
                     <Plus className="w-4 h-4" />
-                    はじめての哲学を作る
+                    はじめての軸を作る
                   </motion.button>
                 </motion.div>
               ) : (
