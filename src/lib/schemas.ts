@@ -103,6 +103,26 @@ export const RoadmapRequestSchema = z.object({
   }).optional(),
 });
 
+// ─── Compass: Reality Check ──────────────────────────────────────────────────
+
+export const RealityCheckRequestSchema = z.object({
+  goal: z.string().min(1),
+  timeframe: z.string().min(1),
+  milestones: z.array(z.object({
+    period: z.string(),
+    title: z.string(),
+    isImported: z.boolean().optional(),
+    keyActions: z.array(z.string()),
+  })),
+});
+
+export const RealityCheckResponseSchema = z.object({
+  progressSummary: z.string(),
+  issues: z.array(z.string()),
+  pivotSuggestions: z.array(z.string()),
+  overallStatus: z.enum(["on-track", "at-risk", "off-track"]),
+});
+
 // ─── Nudge ────────────────────────────────────────────────────────────────────
 
 export const NudgeSuggestionSchema = z.object({

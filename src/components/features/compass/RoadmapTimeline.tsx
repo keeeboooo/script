@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ArrowRight, Check, Pencil, Trash2, Plus, X, Wand2, Send, Loader2 } from "lucide-react";
+import { MapPin, ArrowRight, Check, Pencil, Trash2, Plus, X, Wand2, Send, Loader2, Activity, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition, STAGGER_FAST } from "@/lib/motion";
 import { toast } from "sonner";
 import { ApiError, getUserFriendlyErrorMessage, NETWORK_ERROR_MESSAGE } from "@/lib/errors";
-import type { Milestone, Roadmap } from "@/hooks/useCompass";
+import type { Milestone, Roadmap, RealityCheckResult } from "@/hooks/useCompass";
 
 interface RoadmapTimelineProps {
   roadmap: Roadmap;
@@ -17,6 +17,9 @@ interface RoadmapTimelineProps {
   onUpdateMilestone: (milestoneId: string, patch: Partial<Pick<Milestone, "period" | "title" | "description" | "keyActions">>) => void;
   onDeleteMilestone: (milestoneId: string) => void;
   onEditRoadmapWithAI?: (roadmapId: string, instruction: string) => Promise<void>;
+  onRunRealityCheck?: (roadmapId: string) => Promise<void>;
+  realityCheckResult?: RealityCheckResult;
+  isRealityCheckLoading?: boolean;
 }
 
 const listVariants = {
@@ -179,6 +182,85 @@ function AddMilestoneForm({ onAdd, onCancel }: AddMilestoneFormProps) {
   );
 }
 
+// ── Reality Check 結果カード ──────────────────────────────────────────────────
+const statusConfig = {
+  "on-track": {
+    label: "順調",
+    icon: TrendingUp,
+    className: "text-green-700 bg-green-50 border-green-200",
+    badgeClassName: "bg-green-100 text-green-700",
+  },
+  "at-risk": {
+    label: "要注意",
+    icon: AlertTriangle,
+    className: "text-amber-700 bg-amber-50 border-amber-200",
+    badgeClassName: "bg-amber-100 text-amber-700",
+  },
+  "off-track": {
+    label: "遅延",
+    icon: TrendingDown,
+    className: "text-red-700 bg-red-50 border-red-200",
+    badgeClassName: "bg-red-100 text-red-700",
+  },
+} as const;
+
+function RealityCheckResultCard({ result }: { result: RealityCheckResult }) {
+  const config = statusConfig[result.overallStatus];
+  const StatusIcon = config.icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 8 }}
+      transition={springTransition}
+      className="glass-compass rounded-2xl p-5 space-y-4"
+    >
+      {/* Status badge */}
+      <div className="flex items-center gap-2">
+        <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border", config.className)}>
+          <StatusIcon className="w-3.5 h-3.5" />
+          {config.label}
+        </span>
+        <span className="text-xs text-muted-foreground">Reality Check 結果</span>
+      </div>
+
+      {/* Progress summary */}
+      <p className="text-sm text-foreground/80 leading-relaxed">{result.progressSummary}</p>
+
+      {/* Issues */}
+      {result.issues.length > 0 && (
+        <div className="space-y-1.5">
+          <span className="text-xs font-medium text-compass/70 uppercase tracking-wider">課題・懸念点</span>
+          <ul className="space-y-1">
+            {result.issues.map((issue, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-foreground/70">
+                <span className="text-amber-500 mt-0.5 flex-shrink-0">•</span>
+                <span>{issue}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Pivot suggestions */}
+      {result.pivotSuggestions.length > 0 && (
+        <div className="space-y-1.5">
+          <span className="text-xs font-medium text-compass/70 uppercase tracking-wider">軌道修正の提案</span>
+          <ul className="space-y-1">
+            {result.pivotSuggestions.map((suggestion, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-foreground/70">
+                <span className="text-compass mt-0.5 flex-shrink-0">→</span>
+                <span>{suggestion}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 // ── メインコンポーネント ──────────────────────────────────────────────────────
 export function RoadmapTimeline({
   roadmap,
@@ -188,6 +270,9 @@ export function RoadmapTimeline({
   onUpdateMilestone,
   onDeleteMilestone,
   onEditRoadmapWithAI,
+  onRunRealityCheck,
+  realityCheckResult,
+  isRealityCheckLoading = false,
 }: RoadmapTimelineProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [isAIEditOpen, setIsAIEditOpen] = useState(false);
@@ -250,25 +335,45 @@ export function RoadmapTimeline({
             inputClassName="text-sm"
           />
         </div>
-        {onEditRoadmapWithAI && (
-          <motion.button
-            onClick={() => setIsAIEditOpen((prev) => !prev)}
-            className={cn(
-              "flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
-              isAIEditOpen
-                ? "bg-compass/20 text-compass"
-                : "text-muted-foreground hover:text-compass hover:bg-compass-subtle border border-compass-border/40"
-            )}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            transition={springTransition}
-            aria-label="AIでロードマップを修正"
-            aria-pressed={isAIEditOpen}
-          >
-            <Wand2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">AIで修正</span>
-          </motion.button>
-        )}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {onRunRealityCheck && (
+            <motion.button
+              onClick={() => void onRunRealityCheck(roadmap.id)}
+              disabled={isRealityCheckLoading}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors text-muted-foreground hover:text-compass hover:bg-compass-subtle border border-compass-border/40 disabled:opacity-50 disabled:cursor-not-allowed"
+              whileHover={isRealityCheckLoading ? {} : { scale: 1.02 }}
+              whileTap={isRealityCheckLoading ? {} : { scale: 0.97 }}
+              transition={springTransition}
+              aria-label="Reality Checkを実行"
+            >
+              {isRealityCheckLoading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Activity className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">Reality Check</span>
+            </motion.button>
+          )}
+          {onEditRoadmapWithAI && (
+            <motion.button
+              onClick={() => setIsAIEditOpen((prev) => !prev)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                isAIEditOpen
+                  ? "bg-compass/20 text-compass"
+                  : "text-muted-foreground hover:text-compass hover:bg-compass-subtle border border-compass-border/40"
+              )}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              transition={springTransition}
+              aria-label="AIでロードマップを修正"
+              aria-pressed={isAIEditOpen}
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">AIで修正</span>
+            </motion.button>
+          )}
+        </div>
       </div>
 
       {/* AI Edit Panel */}
@@ -309,6 +414,13 @@ export function RoadmapTimeline({
               </motion.button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reality Check Result */}
+      <AnimatePresence>
+        {realityCheckResult && (
+          <RealityCheckResultCard key="reality-check-result" result={realityCheckResult} />
         )}
       </AnimatePresence>
 
