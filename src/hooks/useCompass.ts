@@ -45,6 +45,8 @@ export interface Milestone {
   description: string;
   keyActions: string[];
   isImported?: boolean;
+  isCompleted?: boolean;
+  completedAt?: string;
 }
 
 export interface Roadmap {
@@ -69,6 +71,8 @@ function rowToMilestone(row: {
   description: string;
   key_actions: string[];
   is_imported: boolean;
+  is_completed?: boolean;
+  completed_at?: string | null;
   position: number;
 }): Milestone {
   return {
@@ -78,6 +82,8 @@ function rowToMilestone(row: {
     description: row.description,
     keyActions: row.key_actions,
     isImported: row.is_imported,
+    isCompleted: row.is_completed ?? false,
+    completedAt: row.completed_at ?? undefined,
   };
 }
 
@@ -723,6 +729,40 @@ export function useCompass() {
     [supabase]
   );
 
+  const completeMilestone = useCallback(
+    async (roadmapId: string, milestoneId: string, done: boolean) => {
+      const now = done ? new Date().toISOString() : undefined;
+      let snapshot: Roadmap[] | null = null;
+
+      setRoadmaps((prev) => {
+        snapshot = prev;
+        return prev.map((r) =>
+          r.id === roadmapId
+            ? {
+                ...r,
+                milestones: r.milestones.map((m) =>
+                  m.id === milestoneId
+                    ? { ...m, isCompleted: done, completedAt: now }
+                    : m
+                ),
+              }
+            : r
+        );
+      });
+
+      const { error } = await supabase
+        .from("milestones")
+        .update({ is_completed: done, completed_at: done ? now : null })
+        .eq("id", milestoneId);
+
+      if (error) {
+        if (snapshot) setRoadmaps(snapshot);
+        toast.error("マイルストーンの更新に失敗しました");
+      }
+    },
+    [supabase]
+  );
+
   const editRoadmapWithAI = useCallback(
     async (roadmapId: string, instruction: string) => {
       // setRoadmaps のコールバック内で最新の roadmaps を参照することで
@@ -810,6 +850,7 @@ export function useCompass() {
     generateRoadmap,
     isRoadmapLoading,
     markMilestoneImported,
+    completeMilestone,
     deleteRoadmap,
     updateRoadmap,
     addMilestone,
