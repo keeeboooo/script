@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { TaskInput } from "@/components/features/task/TaskInput";
 import { TaskList } from "@/components/features/task/TaskList";
 import { useTasks } from "@/hooks/useTasks";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
 const springTransition = { type: "spring" as const, stiffness: 260, damping: 20 };
 
@@ -19,12 +20,14 @@ export default function Home() {
     toggleTask,
     changeTaskStatus,
     deleteTask,
+    undoDelete,
     editTask,
     reorderTasks,
     clearCompleted,
     isLoading,
     isBreakingDown,
     completedCount,
+    streakDays,
     scheduleTask,
     unscheduleTask,
   } = useTasks();
@@ -35,6 +38,14 @@ export default function Home() {
       setLastBreakdownTaskId(newParentId);
     }
   };
+
+  const handleDeleteTask = useCallback((id: string) => {
+    deleteTask(id);
+    toast("タスクを削除しました", {
+      action: { label: "元に戻す", onClick: () => undoDelete(id) },
+      duration: 5000,
+    });
+  }, [deleteTask, undoDelete]);
 
   return (
     <div className="flex flex-col items-center w-full max-w-3xl mx-auto space-y-4 pt-2 sm:pt-4">
@@ -78,7 +89,7 @@ export default function Home() {
               tasks={tasks}
               onToggleTask={toggleTask}
               onChangeTaskStatus={changeTaskStatus}
-              onDeleteTask={deleteTask}
+              onDeleteTask={handleDeleteTask}
               onEditTask={editTask}
               onReorderTasks={reorderTasks}
               onEditBreakdown={editBreakdown}
@@ -86,6 +97,7 @@ export default function Home() {
               onUnscheduleTask={unscheduleTask}
               newlyBreakdownTaskId={lastBreakdownTaskId}
               onDismissSchedulingPrompt={() => setLastBreakdownTaskId(null)}
+              streakDays={streakDays}
             />
 
             {/* Bulk action bar */}

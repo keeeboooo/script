@@ -37,7 +37,21 @@ export default function RootLayout({
         <main className="max-w-3xl mx-auto px-4 sm:px-8 pt-14 pb-8 min-h-screen">
           {children}
         </main>
-        <Toaster position="bottom-center" richColors />
+        <Toaster
+          position="bottom-center"
+          toastOptions={{
+            style: {
+              background: "var(--color-popover)",
+              color: "var(--color-foreground)",
+              border: "1px solid var(--color-border)",
+              fontFamily: "var(--font-body)",
+            },
+            actionButtonStyle: {
+              background: "var(--color-foreground)",
+              color: "var(--color-primary-foreground)",
+            },
+          }}
+        />
       </body>
     </html>
   );

@@ -31,6 +31,7 @@ export const RawTaskSchema = z.object({
 export const BreakdownTaskSchema = z.object({
   title: z.string().max(20),
   estimatedTime: z.string().optional(),
+  estimatedMinutes: z.number().optional(),
   actionLink: z.string().optional(),
 });
 
@@ -100,6 +101,22 @@ export const RoadmapRequestSchema = z.object({
     lifeStatement: z.string(),
     values: z.array(z.object({ name: z.string(), description: z.string() })),
   }).optional(),
+});
+
+// ─── Nudge ────────────────────────────────────────────────────────────────────
+
+export const NudgeSuggestionSchema = z.object({
+  taskId: z.string(),
+  reason: z.string(),
+});
+
+export const NudgeResponseSchema = z.object({
+  suggestions: z.array(NudgeSuggestionSchema),
+});
+
+export const NudgeCacheSchema = z.object({
+  date: z.string(),
+  suggestions: z.array(NudgeSuggestionSchema),
 });
 
 // ─── User ─────────────────────────────────────────────────────────────────────

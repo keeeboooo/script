@@ -20,6 +20,7 @@ export interface Task {
   subTasks?: Task[];
   actionLink?: string;
   estimatedTime?: string;
+  estimatedMinutes?: number;
   linkedGoal?: string;
   linkedRoadmapId?: string;
   linkedMilestoneId?: string;
@@ -329,6 +330,11 @@ export function TaskItem({
                       <span>{completedSubtasks}/{totalSubtasks}</span>
                       <span className="hidden sm:inline">サブタスク</span>
                     </div>
+                  )}
+                  {task.estimatedMinutes !== undefined && task.estimatedMinutes <= 15 && (
+                    <span className="flex items-center gap-1 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md text-xs font-medium text-primary">
+                      ⚡ 今すぐ
+                    </span>
                   )}
                   {task.estimatedTime && (
                     <span className="flex items-center gap-1 bg-secondary/50 px-2 py-0.5 rounded-md text-xs text-muted-foreground">

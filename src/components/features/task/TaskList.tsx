@@ -3,6 +3,8 @@
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Task, TaskItem, TaskStatus } from "./TaskItem";
+import { SmartNudge } from "./SmartNudge";
+import { StreakBadge } from "@/components/ui/StreakBadge";
 import { SchedulingPicker } from "./SchedulingPicker";
 import { cn } from "@/lib/utils";
 import { springTransition, STAGGER_FAST } from "@/lib/motion";
@@ -21,6 +23,7 @@ interface TaskListProps {
   /** ID of the task that just had Breakdown run — shows inline SchedulingPicker */
   newlyBreakdownTaskId?: string | null;
   onDismissSchedulingPrompt?: () => void;
+  streakDays?: number;
 }
 
 interface TaskWithIndex extends Task {
@@ -49,6 +52,7 @@ export function TaskList({
   onUnscheduleTask,
   newlyBreakdownTaskId,
   onDismissSchedulingPrompt,
+  streakDays = 0,
 }: TaskListProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -198,7 +202,7 @@ export function TaskList({
       className="flex flex-col w-full max-w-2xl mx-auto mt-4 px-0 sm:px-2"
     >
       {/* View Toggle */}
-      <div className="flex justify-center mb-3">
+      <div className="flex items-center justify-between mb-3 gap-3">
         <div className="flex p-1 bg-secondary/20 rounded-2xl glass">
           <button
             onClick={() => setViewMode("project")}
@@ -225,6 +229,7 @@ export function TaskList({
             Today
           </button>
         </div>
+        <StreakBadge days={streakDays} />
       </div>
 
       {/* Breakdown直後のインラインスケジューリングプロンプト */}
@@ -257,6 +262,17 @@ export function TaskList({
         </>
       ) : (
         <>
+          <SmartNudge
+            incompleteTasks={processedTasks.filter((t) => t.status !== "done" && t.status !== "canceled")}
+            allTasks={tasks}
+            onToggleTask={onToggleTask}
+            onChangeTaskStatus={onChangeTaskStatus}
+            onDeleteTask={onDeleteTask}
+            onEditTask={onEditTask}
+            onEditBreakdown={onEditBreakdown}
+            onScheduleTask={onScheduleTask}
+            onUnscheduleTask={onUnscheduleTask}
+          />
           {renderGroup(todayBucketTasks, "Today", true, true, "今日の予定はありません")}
           {renderGroup(scheduledBucketTasks, "Scheduled", false, true)}
           {renderGroup(somedayBucketTasks, "Someday", true, true, "いつかやるタスクはありません")}
