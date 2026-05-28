@@ -196,6 +196,10 @@ export function RoadmapTimeline({
   const [aiInstruction, setAiInstruction] = useState("");
   const [isAIEditing, setIsAIEditing] = useState(false);
 
+  const completedCount = roadmap.milestones.filter((m) => m.isCompleted).length;
+  const totalMilestoneCount = roadmap.milestones.length;
+  const completionPct = totalMilestoneCount > 0 ? Math.round((completedCount / totalMilestoneCount) * 100) : 0;
+
   const handleAIEditSubmit = async () => {
     if (!aiInstruction.trim() || !onEditRoadmapWithAI || isAIEditing) return;
     setIsAIEditing(true);
@@ -315,27 +319,22 @@ export function RoadmapTimeline({
       </AnimatePresence>
 
       {/* Progress bar */}
-      {roadmap.milestones.length > 0 && (() => {
-        const completedCount = roadmap.milestones.filter((m) => m.isCompleted).length;
-        const total = roadmap.milestones.length;
-        const pct = Math.round((completedCount / total) * 100);
-        return (
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>進捗</span>
-              <span className="font-medium text-compass">{completedCount}/{total} 完了 {pct}%</span>
-            </div>
-            <div className="h-1.5 rounded-full bg-compass/10 overflow-hidden">
-              <motion.div
-                className="h-full rounded-full bg-compass"
-                initial={{ width: 0 }}
-                animate={{ width: `${pct}%` }}
-                transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              />
-            </div>
+      {totalMilestoneCount > 0 && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>進捗</span>
+            <span className="font-medium text-compass">{completedCount}/{totalMilestoneCount} 完了 {completionPct}%</span>
           </div>
-        );
-      })()}
+          <div className="h-1.5 rounded-full bg-compass/10 overflow-hidden">
+            <motion.div
+              className="h-full rounded-full bg-compass"
+              initial={{ width: 0 }}
+              animate={{ width: `${completionPct}%` }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Timeline */}
       <motion.div

@@ -731,11 +731,12 @@ export function useCompass() {
 
   const completeMilestone = useCallback(
     async (roadmapId: string, milestoneId: string, done: boolean) => {
-      const prevRoadmaps = roadmaps;
       const now = done ? new Date().toISOString() : undefined;
+      let snapshot: Roadmap[] | null = null;
 
-      setRoadmaps((prev) =>
-        prev.map((r) =>
+      setRoadmaps((prev) => {
+        snapshot = prev;
+        return prev.map((r) =>
           r.id === roadmapId
             ? {
                 ...r,
@@ -746,8 +747,8 @@ export function useCompass() {
                 ),
               }
             : r
-        )
-      );
+        );
+      });
 
       const { error } = await supabase
         .from("milestones")
@@ -755,11 +756,11 @@ export function useCompass() {
         .eq("id", milestoneId);
 
       if (error) {
-        setRoadmaps(prevRoadmaps);
+        if (snapshot) setRoadmaps(snapshot);
         toast.error("マイルストーンの更新に失敗しました");
       }
     },
-    [roadmaps, supabase]
+    [supabase]
   );
 
   const editRoadmapWithAI = useCallback(

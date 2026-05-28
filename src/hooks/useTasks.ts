@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Task, TaskStatus } from "@/components/features/task/TaskItem";
 import { v4 as uuidv4 } from "uuid";
 import { BreakdownResponseSchema, BreakdownTaskSchema } from "@/lib/schemas";
@@ -13,6 +14,7 @@ import { ApiError, getUserFriendlyErrorMessage, NETWORK_ERROR_MESSAGE, parseApiE
 const SingleEditResponseSchema = z.object({ task: BreakdownTaskSchema });
 
 export function useTasks() {
+  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
@@ -134,13 +136,15 @@ export function useTasks() {
           (t) => t.status === "done" || t.status === "canceled"
         );
         if (allLinkedDone) {
+          const parts = task.linkedGoal?.split(" › ");
+          const milestoneName = parts && parts.length >= 2 ? parts.slice(1).join(" › ") : (task.linkedGoal ?? "");
           toast.success(
-            `マイルストーン「${task.linkedGoal?.split(" › ")[1] ?? ""}」のタスクが全て完了！`,
+            `マイルストーン「${milestoneName}」のタスクが全て完了！`,
             {
               description: "Compassでマイルストーンを完了にしましょう",
               action: {
                 label: "Compassを開く",
-                onClick: () => { window.location.href = "/compass"; },
+                onClick: () => { router.push("/compass"); },
               },
               duration: 8000,
             }

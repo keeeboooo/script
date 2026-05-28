@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Trash2, ChevronRight, Pencil, Check } from "lucide-react";
 import { springTransition } from "@/lib/motion";
+import { cn } from "@/lib/utils";
 import type { Roadmap } from "@/hooks/useCompass";
 
 interface RoadmapListProps {
@@ -122,7 +123,7 @@ export function RoadmapList({ roadmaps, onSelect, onDelete, onUpdateTitle }: Roa
                         {totalCount > 0 && (
                           <>
                             <span className="text-xs text-muted-foreground">·</span>
-                            <span className={completedCount > 0 ? "text-xs text-compass font-medium" : "text-xs text-muted-foreground"}>
+                            <span className={cn("text-xs", completedCount > 0 ? "text-compass font-medium" : "text-muted-foreground")}>
                               {completedCount}/{totalCount} 完了
                             </span>
                           </>
