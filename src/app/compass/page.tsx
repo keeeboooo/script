@@ -174,7 +174,7 @@ export default function CompassPage() {
             >
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <h2 className="font-display text-lg font-bold tracking-tight">あなたの軸</h2>
+                  <h2 className="font-display text-lg font-bold tracking-tight">My Values</h2>
                   <p className="text-xs text-muted-foreground">
                     あなたの価値観・信念をAIとの対話で言語化したもの
                   </p>
