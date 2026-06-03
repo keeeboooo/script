@@ -105,9 +105,15 @@ export const RoadmapRequestSchema = z.object({
 
 // ─── Nudge ────────────────────────────────────────────────────────────────────
 
+export const NudgePhilosophyValueSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+});
+
 export const NudgeSuggestionSchema = z.object({
   taskId: z.string(),
   reason: z.string(),
+  alignedValue: z.string().optional(),
 });
 
 export const NudgeResponseSchema = z.object({

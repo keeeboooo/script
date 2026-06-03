@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getErrorMessage } from "@/lib/utils";
-import { NudgeResponseSchema } from "@/lib/schemas";
+import { NudgePhilosophyValueSchema, NudgeResponseSchema } from "@/lib/schemas";
 
 const NudgeRequestTaskSchema = z.object({
   id: z.string(),
@@ -14,9 +14,10 @@ const NudgeRequestTaskSchema = z.object({
 
 const NudgeRequestSchema = z.object({
   tasks: z.array(NudgeRequestTaskSchema).min(1),
+  philosophyValues: z.array(NudgePhilosophyValueSchema).optional(),
 });
 
-const systemPrompt = `
+const defaultSystemPrompt = `
 You are a smart task prioritization assistant ("Smart Nudge").
 Given a list of incomplete tasks, select the 3 most actionable tasks for the user to focus on right now.
 
@@ -39,6 +40,35 @@ CRITICAL: Respond only in JSON. No markdown. Select at most 3 tasks. Respond in 
 }
 `;
 
+function buildPhilosophySystemPrompt(values: Array<{ name: string; description: string }>): string {
+  const valuesList = values.map((v, i) => `${i + 1}. ${v.name}: ${v.description}`).join("\n");
+  return `
+You are a smart task prioritization assistant ("Smart Nudge - Philosophy Mode").
+Given a list of incomplete tasks and the user's core values (My Values), select the 3 tasks that best align with their values.
+
+USER'S CORE VALUES:
+${valuesList}
+
+SELECTION CRITERIA:
+1. Choose tasks that most directly contribute to or reflect the listed values.
+2. If multiple tasks serve the same value, prefer ones with lower estimatedMinutes (more actionable).
+3. For each task, identify WHICH value it best aligns with (use the exact value name from the list above).
+
+For each selected task, write:
+- A short Japanese reason (max 40 chars) explaining why it was chosen in terms of the value
+- The name of the value it most aligns with (alignedValue — must be one of the exact names above)
+
+CRITICAL: Respond only in JSON. No markdown. Select at most 3 tasks. Respond in this exact format:
+{
+  "suggestions": [
+    { "taskId": "<id>", "reason": "<理由（日本語40文字以内）>", "alignedValue": "<value name>" },
+    { "taskId": "<id>", "reason": "<理由（日本語40文字以内）>", "alignedValue": "<value name>" },
+    { "taskId": "<id>", "reason": "<理由（日本語40文字以内）>", "alignedValue": "<value name>" }
+  ]
+}
+`;
+}
+
 export async function POST(req: Request) {
   try {
     const body: unknown = await req.json();
@@ -48,12 +78,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid request", errorCode: "VALIDATION_ERROR" }, { status: 400 });
     }
 
-    const { tasks } = parsed.data;
+    const { tasks, philosophyValues } = parsed.data;
 
     const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: "API key not configured", errorCode: "API_KEY_MISSING" }, { status: 500 });
     }
+
+    const systemPrompt =
+      philosophyValues && philosophyValues.length > 0
+        ? buildPhilosophySystemPrompt(philosophyValues)
+        : defaultSystemPrompt;
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
