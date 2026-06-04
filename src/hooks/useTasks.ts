@@ -628,6 +628,11 @@ export function useTasks() {
         await supabase.from("tasks").delete().in("id", oldSubTaskIds);
       }
 
+      const updatedFirstStep = parsed.data.firstStep ?? null;
+      if (updatedFirstStep !== null) {
+        await supabase.from("tasks").update({ first_step: updatedFirstStep }).eq("id", taskId);
+      }
+
       setTasks((prev) => {
         const withoutOldSubtasks = prev.filter((t) => t.parentId !== taskId);
         const newTaskItems: Task[] = newSubTasks.map((t) => ({
@@ -641,7 +646,9 @@ export function useTasks() {
         const parentIndex = withoutOldSubtasks.findIndex((t) => t.id === taskId);
         const result = [...withoutOldSubtasks];
         result.splice(parentIndex + 1, 0, ...newTaskItems);
-        return result;
+        return result.map((t) =>
+          t.id === taskId && updatedFirstStep !== null ? { ...t, firstStep: updatedFirstStep } : t
+        );
       });
     },
     [tasks, supabase]

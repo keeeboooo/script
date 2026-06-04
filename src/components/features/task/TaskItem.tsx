@@ -44,6 +44,7 @@ interface TaskItemProps {
   onDragOver?: (index: number) => void;
   onDragEnd?: () => void;
   isSubTask?: boolean;
+  isFirstSubTask?: boolean;
 }
 
 const itemVariants = {
@@ -66,6 +67,7 @@ export function TaskItem({
   onDragOver,
   onDragEnd,
   isSubTask = false,
+  isFirstSubTask = false,
 }: TaskItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(task.title);
@@ -331,6 +333,11 @@ export function TaskItem({
                       <span className="hidden sm:inline">サブタスク</span>
                     </div>
                   )}
+                  {isFirstSubTask && task.status !== "done" && task.status !== "canceled" && (
+                    <span className="flex items-center gap-1 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md text-xs font-medium text-primary">
+                      ⚡ まず
+                    </span>
+                  )}
                   {task.estimatedMinutes !== undefined && task.estimatedMinutes <= 15 && (
                     <span className="flex items-center gap-1 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md text-xs font-medium text-primary">
                       ⚡ 今すぐ
@@ -591,7 +598,7 @@ export function TaskItem({
             className="overflow-hidden pl-4 pr-0 border-l-2 border-foreground/10 ml-2"
           >
             <div className="flex flex-col gap-1.5">
-              {(showAllSubtasks || subTasks.length < 7 ? subTasks : subTasks.slice(0, 6)).map((subTask) => (
+              {(showAllSubtasks || subTasks.length < 7 ? subTasks : subTasks.slice(0, 6)).map((subTask, subTaskIndex) => (
                 <div key={subTask.id} className="relative">
                   <TaskItem
                     task={subTask}
@@ -603,6 +610,7 @@ export function TaskItem({
                     onScheduleTask={onScheduleTask}
                     onUnscheduleTask={onUnscheduleTask}
                     isSubTask
+                    isFirstSubTask={subTaskIndex === 0}
                   />
                   <div className="absolute left-[-26px] top-1/2 w-4 h-px bg-foreground/10" />
                 </div>
