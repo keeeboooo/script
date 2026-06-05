@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { TaskInput } from "@/components/features/task/TaskInput";
 import { TaskList } from "@/components/features/task/TaskList";
+import { StreakMilestoneOverlay } from "@/components/ui/StreakMilestoneOverlay";
 import { useTasks } from "@/hooks/useTasks";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Sparkles } from "lucide-react";
@@ -28,6 +29,11 @@ export default function Home() {
     isBreakingDown,
     completedCount,
     streakDays,
+    streakIsAtRisk,
+    streakMilestone,
+    clearStreakMilestone,
+    availableFreezes,
+    applyStreakFreeze,
     scheduleTask,
     unscheduleTask,
   } = useTasks();
@@ -98,6 +104,14 @@ export default function Home() {
               newlyBreakdownTaskId={lastBreakdownTaskId}
               onDismissSchedulingPrompt={() => setLastBreakdownTaskId(null)}
               streakDays={streakDays}
+              streakIsAtRisk={streakIsAtRisk}
+              availableFreezes={availableFreezes}
+              onStreakFreeze={applyStreakFreeze}
+            />
+
+            <StreakMilestoneOverlay
+              milestone={streakMilestone}
+              onDismiss={clearStreakMilestone}
             />
 
             {/* Bulk action bar */}

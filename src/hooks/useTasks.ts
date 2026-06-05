@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Task, TaskStatus } from "@/components/features/task/TaskItem";
 import { v4 as uuidv4 } from "uuid";
 import { BreakdownResponseSchema, BreakdownTaskSchema } from "@/lib/schemas";
-import { getTodayStr } from "@/lib/date";
+import { getTodayStr, getYesterdayStr } from "@/lib/date";
 import { createClient } from "@/lib/supabase/client";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -19,6 +19,9 @@ export function useTasks() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [streakDays, setStreakDays] = useState(0);
+  const [streakIsAtRisk, setStreakIsAtRisk] = useState(false);
+  const [streakMilestone, setStreakMilestone] = useState<number | null>(null);
+  const [availableFreezes, setAvailableFreezes] = useState(0);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -87,42 +90,80 @@ export function useTasks() {
 
   // ─── Streak ────────────────────────────────────────────────────────────────
 
-  const fetchStreak = useCallback(async () => {
+  const fetchStreak = useCallback(async (): Promise<number> => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data } = await supabase
-      .from("daily_completion_log")
-      .select("log_date")
-      .eq("user_id", user.id)
-      .order("log_date", { ascending: false })
-      .limit(365);
-
-    if (!data || data.length === 0) {
-      setStreakDays(0);
-      return;
-    }
-
-    const LogRowSchema = z.object({ log_date: z.string() });
+    if (!user) return 0;
 
     const today = getTodayStr();
-    let streak = 0;
-    let cursor = today;
+    const yesterday = getYesterdayStr();
+    const currentMonth = today.slice(0, 7);
 
-    for (const row of data) {
+    const LogRowSchema = z.object({ log_date: z.string() });
+    const FreezeRowSchema = z.object({ freeze_date: z.string() });
+
+    const [logResult, freezeResult] = await Promise.all([
+      supabase
+        .from("daily_completion_log")
+        .select("log_date")
+        .eq("user_id", user.id)
+        .order("log_date", { ascending: false })
+        .limit(365),
+      supabase
+        .from("streak_freezes")
+        .select("freeze_date")
+        .eq("user_id", user.id)
+        .order("freeze_date", { ascending: false })
+        .limit(365),
+    ]);
+
+    const completionDates = new Set<string>();
+    for (const row of (logResult.data ?? [])) {
       const parsed = LogRowSchema.safeParse(row);
-      if (!parsed.success) break;
-      if (parsed.data.log_date === cursor) {
-        streak++;
-        const [y, m, d] = cursor.split("-").map(Number);
-        const prev = new Date(Date.UTC(y!, m! - 1, d! - 1));
-        cursor = prev.toISOString().split("T")[0] ?? cursor;
-      } else {
-        break;
-      }
+      if (parsed.success) completionDates.add(parsed.data.log_date);
+    }
+
+    const freezeDates = new Set<string>();
+    for (const row of (freezeResult.data ?? [])) {
+      const parsed = FreezeRowSchema.safeParse(row);
+      if (parsed.success) freezeDates.add(parsed.data.freeze_date);
+    }
+
+    const freezesThisMonth = [...freezeDates].filter((d) => d.startsWith(currentMonth)).length;
+    setAvailableFreezes(Math.max(0, 3 - freezesThisMonth));
+
+    const effectiveDates = new Set([...completionDates, ...freezeDates]);
+
+    if (effectiveDates.size === 0) {
+      setStreakDays(0);
+      setStreakIsAtRisk(false);
+      return 0;
+    }
+
+    const mostRecent = [...effectiveDates].sort().at(-1)!;
+
+    let cursor: string;
+    if (mostRecent === today) {
+      setStreakIsAtRisk(false);
+      cursor = today;
+    } else if (mostRecent === yesterday) {
+      setStreakIsAtRisk(true);
+      cursor = yesterday;
+    } else {
+      setStreakDays(0);
+      setStreakIsAtRisk(false);
+      return 0;
+    }
+
+    let streak = 0;
+    while (effectiveDates.has(cursor)) {
+      streak++;
+      const [y, m, d] = cursor.split("-").map(Number);
+      const prev = new Date(Date.UTC(y!, m! - 1, d! - 1));
+      cursor = prev.toISOString().split("T")[0] ?? cursor;
     }
 
     setStreakDays(streak);
+    return streak;
   }, [supabase]);
 
   useEffect(() => {
@@ -145,8 +186,25 @@ export function useTasks() {
       .from("daily_completion_log")
       .upsert({ user_id: user.id, log_date: today }, { onConflict: "user_id,log_date" });
 
-    void fetchStreak();
+    const newStreak = await fetchStreak();
+    if (newStreak === 7 || newStreak === 30) {
+      setStreakMilestone(newStreak);
+    }
   }, [supabase, fetchStreak]);
+
+  const applyStreakFreeze = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const today = getTodayStr();
+    await supabase
+      .from("streak_freezes")
+      .upsert({ user_id: user.id, freeze_date: today }, { onConflict: "user_id,freeze_date" });
+    await fetchStreak();
+  }, [supabase, fetchStreak]);
+
+  const clearStreakMilestone = useCallback(() => {
+    setStreakMilestone(null);
+  }, []);
 
   // ─── CRUD ───────────────────────────────────────────────────────────────────
 
@@ -717,6 +775,11 @@ export function useTasks() {
     isBreakingDown: isLoading,
     completedCount,
     streakDays,
+    streakIsAtRisk,
+    streakMilestone,
+    clearStreakMilestone,
+    availableFreezes,
+    applyStreakFreeze,
     todayTasks,
     scheduledTasks,
     somedayTasks,
