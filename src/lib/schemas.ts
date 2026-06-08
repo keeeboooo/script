@@ -15,6 +15,7 @@ export const RawTaskSchema = z.object({
   linkedGoal: z.string().optional(),
   linkedRoadmapId: z.string().optional(),
   linkedMilestoneId: z.string().optional(),
+  listId: z.string().optional(),
   scheduledDate: z.string().optional(),
   scheduledTime: z.string().optional(),
   firstStep: z.string().optional(),
@@ -117,6 +118,32 @@ export const NudgeResponseSchema = z.object({
 export const NudgeCacheSchema = z.object({
   date: z.string(),
   suggestions: z.array(NudgeSuggestionSchema),
+});
+
+// ─── Compass: Roadmap DB row ──────────────────────────────────────────────────
+
+export const MilestoneRowSchema = z.object({
+  id: z.string(),
+  period: z.string(),
+  title: z.string(),
+  description: z.string(),
+  key_actions: z.array(z.string()),
+  is_imported: z.boolean(),
+  is_completed: z.boolean().optional(),
+  completed_at: z.string().nullable().optional(),
+});
+
+// ─── Engine: List ─────────────────────────────────────────────────────────────
+
+export const ListSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  position: z.number(),
+  createdAt: z.string(),
+});
+
+export const CreateListSchema = z.object({
+  name: z.string().min(1).max(30),
 });
 
 // ─── User ─────────────────────────────────────────────────────────────────────
