@@ -429,6 +429,47 @@ export function useTasks() {
     [tasks, supabase]
   );
 
+  // ─── Add Task (Inbox) ──────────────────────────────────────────────────────
+
+  const addTask = useCallback(
+    async (title: string): Promise<string | null> => {
+      const trimmed = title.trim();
+      if (!trimmed) return null;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const id = uuidv4();
+      const position = 0;
+
+      setTasks((prev) => [
+        { id, title: trimmed, status: "todo" },
+        ...prev.map((t, i) => ({ ...t })),
+      ]);
+
+      await supabase.from("tasks").upsert(
+        tasks.map((t, i) => ({ id: t.id, position: i + 1 }))
+      );
+
+      const { error } = await supabase.from("tasks").insert({
+        id,
+        user_id: user.id,
+        title: trimmed,
+        status: "todo",
+        position,
+      });
+
+      if (error) {
+        setTasks((prev) => prev.filter((t) => t.id !== id));
+        toast.error("タスクの追加に失敗しました。");
+        return null;
+      }
+
+      return id;
+    },
+    [tasks, supabase]
+  );
+
   // ─── Magic Breakdown ────────────────────────────────────────────────────────
 
   const breakdownTask = useCallback(
@@ -647,6 +688,29 @@ export function useTasks() {
     [tasks, supabase]
   );
 
+  // ─── Link Task to Roadmap ─────────────────────────────────────────────────
+
+  const linkTaskToRoadmap = useCallback(
+    async (taskId: string, roadmapId: string | null, roadmapTitle: string | null) => {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? { ...t, linkedRoadmapId: roadmapId ?? undefined, linkedGoal: roadmapTitle ?? undefined }
+            : t
+        )
+      );
+
+      await supabase
+        .from("tasks")
+        .update({
+          linked_roadmap_id: roadmapId,
+          linked_goal: roadmapTitle,
+        })
+        .eq("id", taskId);
+    },
+    [supabase]
+  );
+
   // ─── Import from Roadmap (The Thread) ──────────────────────────────────────
 
   const importFromRoadmap = useCallback(
@@ -720,8 +784,10 @@ export function useTasks() {
     todayTasks,
     scheduledTasks,
     somedayTasks,
+    addTask,
     breakdownTask,
     editBreakdown,
+    linkTaskToRoadmap,
     toggleTask,
     changeTaskStatus,
     deleteTask,

@@ -9,15 +9,18 @@ import { SchedulingPicker } from "./SchedulingPicker";
 import { cn } from "@/lib/utils";
 import { springTransition, STAGGER_FAST } from "@/lib/motion";
 import { getTodayStr } from "@/lib/date";
+import type { Roadmap } from "@/hooks/useCompass";
 
 interface TaskListProps {
   tasks: Task[];
+  roadmaps?: Roadmap[];
   onToggleTask: (id: string) => void;
   onChangeTaskStatus: (id: string, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
   onEditTask: (id: string, newTitle: string) => void;
   onReorderTasks: (fromIndex: number, toIndex: number) => void;
   onEditBreakdown?: (taskId: string, instruction: string) => Promise<void>;
+  onLinkRoadmap?: (taskId: string, roadmapId: string | null, roadmapTitle: string | null) => void;
   onScheduleTask?: (id: string, date: string, time?: string) => void;
   onUnscheduleTask?: (id: string) => void;
   /** ID of the task that just had Breakdown run — shows inline SchedulingPicker */
@@ -42,10 +45,12 @@ const listVariants = {
 
 export function TaskList({
   tasks,
+  roadmaps = [],
   onToggleTask,
   onChangeTaskStatus,
   onDeleteTask,
   onEditTask,
+  onLinkRoadmap,
   onReorderTasks,
   onEditBreakdown,
   onScheduleTask,
@@ -105,19 +110,31 @@ export function TaskList({
       });
   }, [tasksWithIndex, viewMode]);
 
-  // Project mode groups
-  const inProgressTasks = useMemo(
-    () => processedTasks.filter((t) => t.status === "in_progress"),
-    [processedTasks]
-  );
-  const todoTasks = useMemo(
-    () => processedTasks.filter((t) => t.status === "todo"),
-    [processedTasks]
-  );
-  const doneTasks = useMemo(
-    () => processedTasks.filter((t) => t.status === "done" || t.status === "canceled"),
-    [processedTasks]
-  );
+  // Project mode: Roadmapごとのグループ
+  const roadmapGroups = useMemo(() => {
+    const activeTasks = processedTasks.filter(
+      (t) => t.status !== "done" && t.status !== "canceled"
+    );
+    const doneTasks = processedTasks.filter(
+      (t) => t.status === "done" || t.status === "canceled"
+    );
+
+    // linkedRoadmapId を持つタスクをRoadmap別に分類
+    const groups: { roadmap: Roadmap; tasks: TaskWithIndex[] }[] = roadmaps.map(
+      (roadmap) => ({
+        roadmap,
+        tasks: activeTasks.filter((t) => t.linkedRoadmapId === roadmap.id),
+      })
+    ).filter((g) => g.tasks.length > 0);
+
+    // Roadmapに紐づかないタスク
+    const linkedRoadmapIds = new Set(roadmaps.map((r) => r.id));
+    const unlinkedTasks = activeTasks.filter(
+      (t) => !t.linkedRoadmapId || !linkedRoadmapIds.has(t.linkedRoadmapId)
+    );
+
+    return { groups, unlinkedTasks, doneTasks };
+  }, [processedTasks, roadmaps]);
 
   // Today mode: 3-bucket split
   const todayBucketTasks = useMemo(
@@ -164,12 +181,14 @@ export function TaskList({
             <TaskItem
               key={task.id}
               task={task}
+              roadmaps={roadmaps}
               index={task.originalIndex}
               onToggle={onToggleTask}
               onChangeStatus={onChangeTaskStatus}
               onDelete={onDeleteTask}
               onEdit={onEditTask}
               onEditBreakdown={onEditBreakdown}
+              onLinkRoadmap={onLinkRoadmap}
               onScheduleTask={onScheduleTask}
               onUnscheduleTask={onUnscheduleTask}
               onDragStart={handleDragStart}
@@ -256,9 +275,52 @@ export function TaskList({
 
       {viewMode === "project" ? (
         <>
-          {renderGroup(inProgressTasks, "In Progress")}
-          {renderGroup(todoTasks, "Todo")}
-          {renderGroup(doneTasks, "Done")}
+          {/* Roadmapごとのグループ */}
+          {roadmapGroups.groups.map(({ roadmap, tasks: groupTasks }) => {
+            const label = roadmap.title ?? roadmap.goal;
+            const total = groupTasks.length;
+            const done = groupTasks.filter((t) => t.status === "done" || t.status === "canceled").length;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            return (
+              <div key={roadmap.id} className="flex flex-col gap-1.5 mb-3">
+                <motion.div layout className="flex items-center justify-between mb-1">
+                  <h2 className="text-sm font-semibold tracking-wide text-compass uppercase flex items-center gap-2">
+                    {label}
+                    {total > 0 && (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {pct}%
+                      </span>
+                    )}
+                  </h2>
+                </motion.div>
+                <AnimatePresence>
+                  {groupTasks.map((task) => (
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      index={task.originalIndex}
+                      onToggle={onToggleTask}
+                      onChangeStatus={onChangeTaskStatus}
+                      onDelete={onDeleteTask}
+                      onEdit={onEditTask}
+                      onEditBreakdown={onEditBreakdown}
+                      onScheduleTask={onScheduleTask}
+                      onUnscheduleTask={onUnscheduleTask}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDragEnd={handleDragEnd}
+                    />
+                  ))}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+
+          {/* Roadmapに紐づかないタスク */}
+          {renderGroup(roadmapGroups.unlinkedTasks, "その他")}
+
+          {/* 完了済み */}
+          {renderGroup(roadmapGroups.doneTasks, "Done")}
         </>
       ) : (
         <>

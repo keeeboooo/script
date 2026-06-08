@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Circle, Compass, X, GripVertical, Pencil, Play, Undo2, Wand2, Send, Loader2, CalendarDays } from "lucide-react";
+import { CheckCircle2, Circle, Compass, X, GripVertical, Pencil, Play, Undo2, Wand2, Send, Loader2, CalendarDays, MapPin } from "lucide-react";
+import type { Roadmap } from "@/hooks/useCompass";
 import { SchedulingPicker } from "./SchedulingPicker";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
@@ -32,11 +33,13 @@ export interface Task {
 
 interface TaskItemProps {
   task: Task;
+  roadmaps?: Roadmap[];
   onToggle: (id: string) => void;
   onChangeStatus?: (id: string, status: TaskStatus) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string, newTitle: string) => void;
   onEditBreakdown?: (taskId: string, instruction: string) => Promise<void>;
+  onLinkRoadmap?: (taskId: string, roadmapId: string | null, roadmapTitle: string | null) => void;
   onScheduleTask?: (id: string, date: string, time?: string) => void;
   onUnscheduleTask?: (id: string) => void;
   index?: number;
@@ -54,11 +57,13 @@ const itemVariants = {
 
 export function TaskItem({
   task,
+  roadmaps = [],
   onToggle,
   onChangeStatus,
   onDelete,
   onEdit,
   onEditBreakdown,
+  onLinkRoadmap,
   onScheduleTask,
   onUnscheduleTask,
   index = 0,
@@ -75,6 +80,7 @@ export function TaskItem({
   const [aiInstruction, setAiInstruction] = useState("");
   const [isAIEditing, setIsAIEditing] = useState(false);
   const [isSchedulePickerOpen, setIsSchedulePickerOpen] = useState(false);
+  const [isRoadmapPickerOpen, setIsRoadmapPickerOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const aiInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -474,6 +480,24 @@ export function TaskItem({
                       <CalendarDays className="w-3.5 h-3.5" />
                     </motion.button>
                   )}
+                  {task.status !== "done" && !isSubTask && onLinkRoadmap && roadmaps.length > 0 && (
+                    <motion.button
+                      onClick={() => setIsRoadmapPickerOpen((prev) => !prev)}
+                      className={cn(
+                        "p-1.5 rounded-lg transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
+                        isRoadmapPickerOpen || task.linkedRoadmapId
+                          ? "text-compass bg-compass-subtle"
+                          : "text-muted-foreground hover:text-compass hover:bg-compass-subtle"
+                      )}
+                      whileTap={{ scale: 0.9 }}
+                      transition={springTransition}
+                      title="Roadmapに紐づける"
+                      aria-label="Roadmapに紐づける"
+                      aria-pressed={isRoadmapPickerOpen}
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                    </motion.button>
+                  )}
                   <motion.button
                     onClick={() => onDelete(task.id)}
                     className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive-foreground hover:bg-destructive/20 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
@@ -556,6 +580,65 @@ export function TaskItem({
               }}
               onSkip={() => setIsSchedulePickerOpen(false)}
             />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Roadmap Picker Panel */}
+      <AnimatePresence>
+        {isRoadmapPickerOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: "auto", marginTop: 8 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={springTransition}
+            className="overflow-hidden"
+          >
+            <div className="flex flex-col gap-1 pt-2 border-t border-foreground/10">
+              <p className="text-xs text-muted-foreground px-1 mb-1 flex items-center gap-1.5">
+                <MapPin className="w-3 h-3" />
+                Roadmapに紐づける
+              </p>
+              {roadmaps.map((roadmap) => {
+                const label = roadmap.title ?? roadmap.goal;
+                const isLinked = task.linkedRoadmapId === roadmap.id;
+                return (
+                  <motion.button
+                    key={roadmap.id}
+                    onClick={() => {
+                      onLinkRoadmap?.(task.id, isLinked ? null : roadmap.id, isLinked ? null : label);
+                      setIsRoadmapPickerOpen(false);
+                    }}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm text-left transition-colors",
+                      isLinked
+                        ? "bg-compass-subtle text-compass font-medium"
+                        : "hover:bg-secondary/50 text-foreground"
+                    )}
+                    whileTap={{ scale: 0.97 }}
+                    transition={springTransition}
+                  >
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                    {label}
+                    {isLinked && <span className="ml-auto text-xs text-compass/70">紐づけ中</span>}
+                  </motion.button>
+                );
+              })}
+              {task.linkedRoadmapId && (
+                <motion.button
+                  onClick={() => {
+                    onLinkRoadmap?.(task.id, null, null);
+                    setIsRoadmapPickerOpen(false);
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive-foreground transition-colors text-left"
+                  whileTap={{ scale: 0.97 }}
+                  transition={springTransition}
+                >
+                  <X className="w-3.5 h-3.5 flex-shrink-0" />
+                  紐づけを解除
+                </motion.button>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
