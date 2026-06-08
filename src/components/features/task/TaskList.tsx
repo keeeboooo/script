@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Task, TaskItem, TaskStatus } from "./TaskItem";
 import { SmartNudge } from "./SmartNudge";
 import { StreakBadge } from "@/components/ui/StreakBadge";
@@ -57,6 +58,7 @@ export function TaskList({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"project" | "today">("project");
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   const handleDragStart = useCallback((index: number) => {
     setDragIndex(index);
@@ -80,6 +82,17 @@ export function TaskList({
   );
 
   const todayStr = useMemo(() => getTodayStr(), []);
+
+  const sortTodayViewTasks = useCallback((list: TaskWithIndex[]): TaskWithIndex[] => {
+    return [...list].sort((a, b) => {
+      const timeA = a.scheduledTime ?? "￿";
+      const timeB = b.scheduledTime ?? "￿";
+      if (timeA !== timeB) return timeA < timeB ? -1 : 1;
+      const minA = a.estimatedMinutes ?? Infinity;
+      const minB = b.estimatedMinutes ?? Infinity;
+      return minA - minB;
+    });
+  }, []);
 
   const processedTasks: TaskWithIndex[] = useMemo(() => {
     if (viewMode === "project") {
@@ -121,16 +134,16 @@ export function TaskList({
 
   // Today mode: 3-bucket split
   const todayBucketTasks = useMemo(
-    () => processedTasks.filter((t) => t.scheduledDate === todayStr && t.status !== "done" && t.status !== "canceled"),
-    [processedTasks, todayStr]
+    () => sortTodayViewTasks(processedTasks.filter((t) => t.scheduledDate === todayStr && t.status !== "done" && t.status !== "canceled")),
+    [processedTasks, todayStr, sortTodayViewTasks]
   );
   const scheduledBucketTasks = useMemo(
     () => processedTasks.filter((t) => t.scheduledDate && t.scheduledDate > todayStr && t.status !== "done" && t.status !== "canceled"),
     [processedTasks, todayStr]
   );
   const somedayBucketTasks = useMemo(
-    () => processedTasks.filter((t) => !t.scheduledDate && t.status !== "done" && t.status !== "canceled"),
-    [processedTasks]
+    () => sortTodayViewTasks(processedTasks.filter((t) => !t.scheduledDate && t.status !== "done" && t.status !== "canceled")),
+    [processedTasks, sortTodayViewTasks]
   );
   const doneBucketTasks = useMemo(
     () => processedTasks.filter((t) => t.status === "done" || t.status === "canceled"),
@@ -144,9 +157,29 @@ export function TaskList({
     title: string,
     showEmptyIfZero = false,
     compact = false,
-    emptyMessage = "タスクはありません"
+    emptyMessage = "タスクはありません",
+    groupKey?: string,
+    defaultLimit?: number
   ) => {
     if (groupTasks.length === 0 && !showEmptyIfZero) return null;
+
+    const isExpanded = groupKey ? expandedGroups.has(groupKey) : true;
+    const hasLimit = groupKey !== undefined && defaultLimit !== undefined && groupTasks.length > defaultLimit;
+    const visibleTasks = hasLimit && !isExpanded ? groupTasks.slice(0, defaultLimit) : groupTasks;
+    const hiddenCount = hasLimit ? groupTasks.length - defaultLimit : 0;
+
+    const toggleExpand = () => {
+      if (!groupKey) return;
+      setExpandedGroups((prev) => {
+        const next = new Set(prev);
+        if (next.has(groupKey)) {
+          next.delete(groupKey);
+        } else {
+          next.add(groupKey);
+        }
+        return next;
+      });
+    };
 
     return (
       <div className="flex flex-col gap-1.5 mb-3">
@@ -160,7 +193,7 @@ export function TaskList({
         </motion.div>
 
         <AnimatePresence>
-          {groupTasks.map((task) => (
+          {visibleTasks.map((task) => (
             <TaskItem
               key={task.id}
               task={task}
@@ -190,6 +223,28 @@ export function TaskList({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {hasLimit && (
+          <motion.button
+            layout
+            onClick={toggleExpand}
+            transition={springTransition}
+            whileTap={{ scale: 0.97 }}
+            className="flex items-center justify-center gap-1.5 w-full py-2 text-xs text-muted-foreground hover:text-foreground rounded-xl hover:bg-secondary/30 transition-colors"
+          >
+            {isExpanded ? (
+              <>
+                <ChevronUp className="w-3.5 h-3.5" />
+                折りたたむ
+              </>
+            ) : (
+              <>
+                <ChevronDown className="w-3.5 h-3.5" />
+                他 {hiddenCount} 件を表示
+              </>
+            )}
+          </motion.button>
+        )}
       </div>
     );
   };
@@ -205,7 +260,7 @@ export function TaskList({
       <div className="flex items-center justify-between mb-3 gap-3">
         <div className="flex p-1 bg-secondary/20 rounded-2xl glass">
           <button
-            onClick={() => setViewMode("project")}
+            onClick={() => { setViewMode("project"); setExpandedGroups(new Set()); }}
             aria-pressed={viewMode === "project"}
             className={cn(
               "px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300",
@@ -217,7 +272,7 @@ export function TaskList({
             Projects
           </button>
           <button
-            onClick={() => { setViewMode("today"); onDismissSchedulingPrompt?.(); }}
+            onClick={() => { setViewMode("today"); setExpandedGroups(new Set()); onDismissSchedulingPrompt?.(); }}
             aria-pressed={viewMode === "today"}
             className={cn(
               "px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300",
@@ -273,9 +328,9 @@ export function TaskList({
             onScheduleTask={onScheduleTask}
             onUnscheduleTask={onUnscheduleTask}
           />
-          {renderGroup(todayBucketTasks, "Today", true, true, "今日の予定はありません")}
+          {renderGroup(todayBucketTasks, "Today", true, true, "今日の予定はありません", "today", 3)}
           {renderGroup(scheduledBucketTasks, "Scheduled", false, true)}
-          {renderGroup(somedayBucketTasks, "Someday", true, true, "いつかやるタスクはありません")}
+          {renderGroup(somedayBucketTasks, "Someday", true, true, "いつかやるタスクはありません", "someday", 3)}
           {renderGroup(doneBucketTasks, "Done", false, true)}
         </>
       )}
