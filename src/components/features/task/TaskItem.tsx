@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, Circle, Compass, X, GripVertical, Pencil, Play, Undo2, Wand2, Send, Loader2, CalendarDays, MapPin } from "lucide-react";
 import type { Roadmap } from "@/hooks/useCompass";
+import type { List } from "@/hooks/useLists";
 import { SchedulingPicker } from "./SchedulingPicker";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
@@ -25,6 +26,7 @@ export interface Task {
   linkedGoal?: string;
   linkedRoadmapId?: string;
   linkedMilestoneId?: string;
+  listId?: string;
   parentId?: string;
   scheduledDate?: string;
   scheduledTime?: string;
@@ -34,12 +36,14 @@ export interface Task {
 interface TaskItemProps {
   task: Task;
   roadmaps?: Roadmap[];
+  lists?: List[];
   onToggle: (id: string) => void;
   onChangeStatus?: (id: string, status: TaskStatus) => void;
   onDelete: (id: string) => void;
   onEdit: (id: string, newTitle: string) => void;
   onEditBreakdown?: (taskId: string, instruction: string) => Promise<void>;
   onLinkRoadmap?: (taskId: string, roadmapId: string | null, roadmapTitle: string | null) => void;
+  onAssignList?: (taskId: string, listId: string | null) => void;
   onScheduleTask?: (id: string, date: string, time?: string) => void;
   onUnscheduleTask?: (id: string) => void;
   index?: number;
@@ -58,12 +62,14 @@ const itemVariants = {
 export function TaskItem({
   task,
   roadmaps = [],
+  lists = [],
   onToggle,
   onChangeStatus,
   onDelete,
   onEdit,
   onEditBreakdown,
   onLinkRoadmap,
+  onAssignList,
   onScheduleTask,
   onUnscheduleTask,
   index = 0,
@@ -81,6 +87,7 @@ export function TaskItem({
   const [isAIEditing, setIsAIEditing] = useState(false);
   const [isSchedulePickerOpen, setIsSchedulePickerOpen] = useState(false);
   const [isRoadmapPickerOpen, setIsRoadmapPickerOpen] = useState(false);
+  const [isListPickerOpen, setIsListPickerOpen] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const aiInputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -305,6 +312,11 @@ export function TaskItem({
                 {task.title}
               </h3>
             )}
+            {task.listId && !isSubTask && task.status !== "done" && task.status !== "canceled" && (
+              <span className="flex-shrink-0 px-2 py-0.5 rounded-full text-xs bg-secondary/50 text-muted-foreground">
+                {lists.find((l) => l.id === task.listId)?.name}
+              </span>
+            )}
             {task.linkedGoal &&
               task.status !== "done" &&
               task.status !== "canceled" && (
@@ -480,6 +492,31 @@ export function TaskItem({
                       <CalendarDays className="w-3.5 h-3.5" />
                     </motion.button>
                   )}
+                  {task.status !== "done" && !isSubTask && onAssignList && lists.length > 0 && (
+                    <motion.button
+                      onClick={() => setIsListPickerOpen((prev) => !prev)}
+                      className={cn(
+                        "p-1.5 rounded-lg transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
+                        isListPickerOpen || task.listId
+                          ? "text-foreground bg-secondary/50"
+                          : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                      )}
+                      whileTap={{ scale: 0.9 }}
+                      transition={springTransition}
+                      title="Listに追加"
+                      aria-label="Listに追加"
+                      aria-pressed={isListPickerOpen}
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="8" y1="6" x2="21" y2="6" />
+                        <line x1="8" y1="12" x2="21" y2="12" />
+                        <line x1="8" y1="18" x2="21" y2="18" />
+                        <line x1="3" y1="6" x2="3.01" y2="6" />
+                        <line x1="3" y1="12" x2="3.01" y2="12" />
+                        <line x1="3" y1="18" x2="3.01" y2="18" />
+                      </svg>
+                    </motion.button>
+                  )}
                   {task.status !== "done" && !isSubTask && onLinkRoadmap && roadmaps.length > 0 && (
                     <motion.button
                       onClick={() => setIsRoadmapPickerOpen((prev) => !prev)}
@@ -580,6 +617,61 @@ export function TaskItem({
               }}
               onSkip={() => setIsSchedulePickerOpen(false)}
             />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* List Picker Panel */}
+      <AnimatePresence>
+        {isListPickerOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: "auto", marginTop: 8 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={springTransition}
+            className="overflow-hidden"
+          >
+            <div className="flex flex-col gap-1 pt-2 border-t border-foreground/10">
+              <p className="text-xs text-muted-foreground px-1 mb-1">Listに追加</p>
+              {lists.map((list) => {
+                const isAssigned = task.listId === list.id;
+                return (
+                  <motion.button
+                    key={list.id}
+                    onClick={() => {
+                      onAssignList?.(task.id, isAssigned ? null : list.id);
+                      setIsListPickerOpen(false);
+                    }}
+                    className={cn(
+                      "flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm text-left transition-colors",
+                      isAssigned
+                        ? "bg-secondary/60 text-foreground font-medium"
+                        : "hover:bg-secondary/50 text-foreground"
+                    )}
+                    whileTap={{ scale: 0.97 }}
+                    transition={springTransition}
+                  >
+                    <span className="text-muted-foreground">·</span>
+                    {list.name}
+                    {isAssigned && <span className="ml-auto text-xs text-muted-foreground">追加済み</span>}
+                  </motion.button>
+                );
+              })}
+              {task.listId && (
+                <motion.button
+                  onClick={() => {
+                    onAssignList?.(task.id, null);
+                    setIsListPickerOpen(false);
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm text-muted-foreground hover:bg-destructive/10 hover:text-destructive-foreground transition-colors text-left"
+                  whileTap={{ scale: 0.97 }}
+                  transition={springTransition}
+                >
+                  <X className="w-3.5 h-3.5 flex-shrink-0" />
+                  Listから外す
+                </motion.button>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -42,6 +42,7 @@ export function useTasks() {
       linked_goal: string | null;
       linked_roadmap_id: string | null;
       linked_milestone_id: string | null;
+      list_id: string | null;
       scheduled_date: string | null;
       scheduled_time: string | null;
       first_step: string | null;
@@ -57,6 +58,7 @@ export function useTasks() {
       linkedGoal: row.linked_goal ?? undefined,
       linkedRoadmapId: row.linked_roadmap_id ?? undefined,
       linkedMilestoneId: row.linked_milestone_id ?? undefined,
+      listId: row.list_id ?? undefined,
       scheduledDate: row.scheduled_date ?? undefined,
       scheduledTime: row.scheduled_time ?? undefined,
       firstStep: row.first_step ?? undefined,
@@ -432,7 +434,7 @@ export function useTasks() {
   // ─── Add Task (Inbox) ──────────────────────────────────────────────────────
 
   const addTask = useCallback(
-    async (title: string): Promise<string | null> => {
+    async (title: string, listId?: string): Promise<string | null> => {
       const trimmed = title.trim();
       if (!trimmed) return null;
 
@@ -443,8 +445,8 @@ export function useTasks() {
       const position = 0;
 
       setTasks((prev) => [
-        { id, title: trimmed, status: "todo" },
-        ...prev.map((t, i) => ({ ...t })),
+        { id, title: trimmed, status: "todo", listId },
+        ...prev,
       ]);
 
       await supabase.from("tasks").upsert(
@@ -457,6 +459,7 @@ export function useTasks() {
         title: trimmed,
         status: "todo",
         position,
+        list_id: listId ?? null,
       });
 
       if (error) {
@@ -711,6 +714,20 @@ export function useTasks() {
     [supabase]
   );
 
+  // ─── Assign Task to List ──────────────────────────────────────────────────
+
+  const assignTaskToList = useCallback(
+    async (taskId: string, listId: string | null) => {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId ? { ...t, listId: listId ?? undefined } : t
+        )
+      );
+      await supabase.from("tasks").update({ list_id: listId }).eq("id", taskId);
+    },
+    [supabase]
+  );
+
   // ─── Import from Roadmap (The Thread) ──────────────────────────────────────
 
   const importFromRoadmap = useCallback(
@@ -785,6 +802,7 @@ export function useTasks() {
     scheduledTasks,
     somedayTasks,
     addTask,
+    assignTaskToList,
     breakdownTask,
     editBreakdown,
     linkTaskToRoadmap,

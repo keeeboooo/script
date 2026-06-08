@@ -10,10 +10,14 @@ import { cn } from "@/lib/utils";
 import { springTransition, STAGGER_FAST } from "@/lib/motion";
 import { getTodayStr } from "@/lib/date";
 import type { Roadmap } from "@/hooks/useCompass";
+import type { List } from "@/hooks/useLists";
+import { Plus } from "lucide-react";
 
 interface TaskListProps {
   tasks: Task[];
   roadmaps?: Roadmap[];
+  lists?: List[];
+  onCreateList?: (name: string) => Promise<void>;
   onToggleTask: (id: string) => void;
   onChangeTaskStatus: (id: string, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
@@ -21,6 +25,7 @@ interface TaskListProps {
   onReorderTasks: (fromIndex: number, toIndex: number) => void;
   onEditBreakdown?: (taskId: string, instruction: string) => Promise<void>;
   onLinkRoadmap?: (taskId: string, roadmapId: string | null, roadmapTitle: string | null) => void;
+  onAssignList?: (taskId: string, listId: string | null) => void;
   onScheduleTask?: (id: string, date: string, time?: string) => void;
   onUnscheduleTask?: (id: string) => void;
   /** ID of the task that just had Breakdown run — shows inline SchedulingPicker */
@@ -46,11 +51,14 @@ const listVariants = {
 export function TaskList({
   tasks,
   roadmaps = [],
+  lists = [],
+  onCreateList,
   onToggleTask,
   onChangeTaskStatus,
   onDeleteTask,
   onEditTask,
   onLinkRoadmap,
+  onAssignList,
   onReorderTasks,
   onEditBreakdown,
   onScheduleTask,
@@ -62,6 +70,9 @@ export function TaskList({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"project" | "today">("project");
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [isCreatingList, setIsCreatingList] = useState(false);
+  const [newListName, setNewListName] = useState("");
 
   const handleDragStart = useCallback((index: number) => {
     setDragIndex(index);
@@ -109,6 +120,13 @@ export function TaskList({
         return t;
       });
   }, [tasksWithIndex, viewMode]);
+
+  // Projects モード: Listタブで絞り込まれた親タスク一覧
+  const filteredProjectTasks = useMemo(() => {
+    if (viewMode !== "project") return processedTasks;
+    if (selectedListId === null) return processedTasks; // All
+    return processedTasks.filter((t) => t.listId === selectedListId);
+  }, [processedTasks, viewMode, selectedListId]);
 
   // Project mode: Roadmapごとのグループ
   const roadmapGroups = useMemo(() => {
@@ -182,6 +200,7 @@ export function TaskList({
               key={task.id}
               task={task}
               roadmaps={roadmaps}
+              lists={lists}
               index={task.originalIndex}
               onToggle={onToggleTask}
               onChangeStatus={onChangeTaskStatus}
@@ -189,6 +208,7 @@ export function TaskList({
               onEdit={onEditTask}
               onEditBreakdown={onEditBreakdown}
               onLinkRoadmap={onLinkRoadmap}
+              onAssignList={onAssignList}
               onScheduleTask={onScheduleTask}
               onUnscheduleTask={onUnscheduleTask}
               onDragStart={handleDragStart}
@@ -275,49 +295,124 @@ export function TaskList({
 
       {viewMode === "project" ? (
         <>
+          {/* Listタブ */}
+          <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none">
+            <div className="flex p-1 bg-secondary/20 rounded-2xl glass flex-shrink-0">
+              <button
+                onClick={() => setSelectedListId(null)}
+                className={cn(
+                  "px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 outline-none",
+                  selectedListId === null
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                )}
+              >
+                All
+              </button>
+              {lists.map((list) => (
+                <button
+                  key={list.id}
+                  onClick={() => setSelectedListId(list.id)}
+                  className={cn(
+                    "px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 outline-none",
+                    selectedListId === list.id
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                  )}
+                >
+                  {list.name}
+                </button>
+              ))}
+            </div>
+
+            {isCreatingList ? (
+              <motion.input
+                autoFocus
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: "8rem" }}
+                type="text"
+                value={newListName}
+                onChange={(e) => setNewListName(e.target.value)}
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter" && newListName.trim()) {
+                    await onCreateList?.(newListName.trim());
+                    setNewListName("");
+                    setIsCreatingList(false);
+                  }
+                  if (e.key === "Escape") {
+                    setNewListName("");
+                    setIsCreatingList(false);
+                  }
+                }}
+                onBlur={() => {
+                  setNewListName("");
+                  setIsCreatingList(false);
+                }}
+                placeholder="List名"
+                className="flex-shrink-0 bg-secondary/20 glass border-none rounded-2xl px-4 py-2 text-xs sm:text-sm outline-none"
+              />
+            ) : (
+              <motion.button
+                onClick={() => setIsCreatingList(true)}
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors outline-none"
+                whileTap={{ scale: 0.95 }}
+                transition={springTransition}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                List
+              </motion.button>
+            )}
+          </div>
+
           {/* Roadmapごとのグループ */}
-          {roadmapGroups.groups.map(({ roadmap, tasks: groupTasks }) => {
-            const label = roadmap.title ?? roadmap.goal;
-            const total = groupTasks.length;
-            const done = groupTasks.filter((t) => t.status === "done" || t.status === "canceled").length;
-            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-            return (
-              <div key={roadmap.id} className="flex flex-col gap-1.5 mb-3">
-                <motion.div layout className="flex items-center justify-between mb-1">
-                  <h2 className="text-sm font-semibold tracking-wide text-compass uppercase flex items-center gap-2">
-                    {label}
-                    {total > 0 && (
-                      <span className="text-xs font-normal text-muted-foreground">
-                        {pct}%
-                      </span>
-                    )}
-                  </h2>
-                </motion.div>
-                <AnimatePresence>
-                  {groupTasks.map((task) => (
-                    <TaskItem
-                      key={task.id}
-                      task={task}
-                      index={task.originalIndex}
-                      onToggle={onToggleTask}
-                      onChangeStatus={onChangeTaskStatus}
-                      onDelete={onDeleteTask}
-                      onEdit={onEditTask}
-                      onEditBreakdown={onEditBreakdown}
-                      onScheduleTask={onScheduleTask}
-                      onUnscheduleTask={onUnscheduleTask}
-                      onDragStart={handleDragStart}
-                      onDragOver={handleDragOver}
-                      onDragEnd={handleDragEnd}
-                    />
-                  ))}
-                </AnimatePresence>
-              </div>
-            );
-          })}
+          {roadmapGroups.groups
+            .map(({ roadmap, tasks: groupTasks }) => {
+              const filtered = selectedListId
+                ? groupTasks.filter((t) => t.listId === selectedListId)
+                : groupTasks;
+              if (filtered.length === 0) return null;
+              const label = roadmap.title ?? roadmap.goal;
+              return (
+                <div key={roadmap.id} className="flex flex-col gap-1.5 mb-3">
+                  <motion.div layout className="flex items-center justify-between mb-1">
+                    <h2 className="text-sm font-semibold tracking-wide text-compass uppercase flex items-center gap-2">
+                      {label}
+                    </h2>
+                  </motion.div>
+                  <AnimatePresence>
+                    {filtered.map((task) => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        roadmaps={roadmaps}
+                        lists={lists}
+                        index={task.originalIndex}
+                        onToggle={onToggleTask}
+                        onChangeStatus={onChangeTaskStatus}
+                        onDelete={onDeleteTask}
+                        onEdit={onEditTask}
+                        onEditBreakdown={onEditBreakdown}
+                        onLinkRoadmap={onLinkRoadmap}
+                        onAssignList={onAssignList}
+                        onScheduleTask={onScheduleTask}
+                        onUnscheduleTask={onUnscheduleTask}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDragEnd={handleDragEnd}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
 
           {/* Roadmapに紐づかないタスク */}
-          {renderGroup(roadmapGroups.unlinkedTasks, "その他")}
+          {renderGroup(
+            selectedListId
+              ? roadmapGroups.unlinkedTasks.filter((t) => t.listId === selectedListId)
+              : roadmapGroups.unlinkedTasks,
+            "その他"
+          )}
 
           {/* 完了済み */}
           {renderGroup(roadmapGroups.doneTasks, "Done")}

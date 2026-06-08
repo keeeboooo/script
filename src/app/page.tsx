@@ -5,6 +5,7 @@ import { TaskInput } from "@/components/features/task/TaskInput";
 import { TaskList } from "@/components/features/task/TaskList";
 import { useTasks } from "@/hooks/useTasks";
 import { useRoadmaps } from "@/hooks/useRoadmaps";
+import { useLists } from "@/hooks/useLists";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -14,10 +15,12 @@ const springTransition = { type: "spring" as const, stiffness: 260, damping: 20 
 export default function Home() {
   const [lastBreakdownTaskId, setLastBreakdownTaskId] = useState<string | null>(null);
   const roadmaps = useRoadmaps();
+  const { lists, createList } = useLists();
 
   const {
     tasks,
     addTask,
+    assignTaskToList,
     breakdownTask,
     editBreakdown,
     linkTaskToRoadmap,
@@ -92,11 +95,14 @@ export default function Home() {
             <TaskList
               tasks={tasks}
               roadmaps={roadmaps}
+              lists={lists}
+              onCreateList={async (name) => { await createList(name); }}
               onToggleTask={toggleTask}
               onChangeTaskStatus={changeTaskStatus}
               onDeleteTask={handleDeleteTask}
               onEditTask={editTask}
               onLinkRoadmap={linkTaskToRoadmap}
+              onAssignList={assignTaskToList}
               onReorderTasks={reorderTasks}
               onEditBreakdown={editBreakdown}
               onScheduleTask={scheduleTask}
