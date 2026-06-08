@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { MilestoneRowSchema } from "@/lib/schemas";
 import type { Roadmap, Milestone } from "@/hooks/useCompass";
 
 function rowToMilestone(row: {
@@ -40,9 +41,14 @@ export function useRoadmaps() {
       if (!data) return;
 
       const mapped: Roadmap[] = data.map((r) => {
-        const milestones = (r.milestones as Parameters<typeof rowToMilestone>[0][])
-          .map(rowToMilestone)
-          .sort((a, b) => (a.period > b.period ? 1 : -1));
+        const rawMilestones: unknown[] = Array.isArray(r.milestones) ? r.milestones : [];
+        const milestones: Milestone[] = rawMilestones
+          .map((m) => {
+            const parsed = MilestoneRowSchema.safeParse(m);
+            return parsed.success ? rowToMilestone(parsed.data) : null;
+          })
+          .filter((m): m is Milestone => m !== null)
+          .sort((a: Milestone, b: Milestone) => (a.period > b.period ? 1 : -1));
         return {
           id: r.id,
           createdAt: r.created_at,

@@ -14,6 +14,7 @@ const springTransition = { type: "spring" as const, stiffness: 260, damping: 20 
 
 export default function Home() {
   const [lastBreakdownTaskId, setLastBreakdownTaskId] = useState<string | null>(null);
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const roadmaps = useRoadmaps();
   const { lists, createList } = useLists();
 
@@ -66,7 +67,7 @@ export default function Home() {
       </div>
 
       <div className="w-full relative z-10">
-        <TaskInput onSubmit={handleBreakdown} onAdd={addTask} isLoading={isLoading} />
+        <TaskInput onSubmit={handleBreakdown} onAdd={addTask} selectedListId={selectedListId} isLoading={isLoading} />
 
         {isLoading && (
           <motion.div
@@ -97,6 +98,8 @@ export default function Home() {
               roadmaps={roadmaps}
               lists={lists}
               onCreateList={async (name) => { await createList(name); }}
+              selectedListId={selectedListId}
+              onSelectList={setSelectedListId}
               onToggleTask={toggleTask}
               onChangeTaskStatus={changeTaskStatus}
               onDeleteTask={handleDeleteTask}

@@ -442,13 +442,8 @@ export function useTasks() {
       if (!user) return null;
 
       const id = uuidv4();
-      const position = 0;
 
-      setTasks((prev) => [
-        { id, title: trimmed, status: "todo", listId },
-        ...prev,
-      ]);
-
+      // 既存タスクのpositionを1つずらしてからinsert
       await supabase.from("tasks").upsert(
         tasks.map((t, i) => ({ id: t.id, position: i + 1 }))
       );
@@ -458,15 +453,19 @@ export function useTasks() {
         user_id: user.id,
         title: trimmed,
         status: "todo",
-        position,
+        position: 0,
         list_id: listId ?? null,
       });
 
       if (error) {
-        setTasks((prev) => prev.filter((t) => t.id !== id));
         toast.error("タスクの追加に失敗しました。");
         return null;
       }
+
+      setTasks((prev) => [
+        { id, title: trimmed, status: "todo", listId },
+        ...prev,
+      ]);
 
       return id;
     },

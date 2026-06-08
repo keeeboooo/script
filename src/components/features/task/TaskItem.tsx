@@ -494,7 +494,10 @@ export function TaskItem({
                   )}
                   {task.status !== "done" && !isSubTask && onAssignList && lists.length > 0 && (
                     <motion.button
-                      onClick={() => setIsListPickerOpen((prev) => !prev)}
+                      onClick={() => {
+                        setIsListPickerOpen((prev) => !prev);
+                        setIsRoadmapPickerOpen(false);
+                      }}
                       className={cn(
                         "p-1.5 rounded-lg transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
                         isListPickerOpen || task.listId
@@ -519,7 +522,10 @@ export function TaskItem({
                   )}
                   {task.status !== "done" && !isSubTask && onLinkRoadmap && roadmaps.length > 0 && (
                     <motion.button
-                      onClick={() => setIsRoadmapPickerOpen((prev) => !prev)}
+                      onClick={() => {
+                        setIsRoadmapPickerOpen((prev) => !prev);
+                        setIsListPickerOpen(false);
+                      }}
                       className={cn(
                         "p-1.5 rounded-lg transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100",
                         isRoadmapPickerOpen || task.linkedRoadmapId

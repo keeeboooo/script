@@ -16,11 +16,12 @@ const PLACEHOLDER_EXAMPLES = [
 
 interface TaskInputProps {
   onSubmit: (prompt: string) => void;
-  onAdd?: (title: string) => void;
+  onAdd?: (title: string, listId?: string) => void;
+  selectedListId?: string | null;
   isLoading?: boolean;
 }
 
-export function TaskInput({ onSubmit, onAdd, isLoading }: TaskInputProps) {
+export function TaskInput({ onSubmit, onAdd, selectedListId, isLoading }: TaskInputProps) {
   const [value, setValue] = useState("");
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,7 +43,7 @@ export function TaskInput({ onSubmit, onAdd, isLoading }: TaskInputProps) {
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!value.trim() || isLoading) return;
-    onAdd?.(value);
+    onAdd?.(value, selectedListId ?? undefined);
     setValue("");
   };
 

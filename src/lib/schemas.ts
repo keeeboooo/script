@@ -120,6 +120,19 @@ export const NudgeCacheSchema = z.object({
   suggestions: z.array(NudgeSuggestionSchema),
 });
 
+// ─── Compass: Roadmap DB row ──────────────────────────────────────────────────
+
+export const MilestoneRowSchema = z.object({
+  id: z.string(),
+  period: z.string(),
+  title: z.string(),
+  description: z.string(),
+  key_actions: z.array(z.string()),
+  is_imported: z.boolean(),
+  is_completed: z.boolean().optional(),
+  completed_at: z.string().nullable().optional(),
+});
+
 // ─── Engine: List ─────────────────────────────────────────────────────────────
 
 export const ListSchema = z.object({

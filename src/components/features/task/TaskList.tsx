@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Task, TaskItem, TaskStatus } from "./TaskItem";
 import { SmartNudge } from "./SmartNudge";
@@ -18,6 +18,8 @@ interface TaskListProps {
   roadmaps?: Roadmap[];
   lists?: List[];
   onCreateList?: (name: string) => Promise<void>;
+  selectedListId?: string | null;
+  onSelectList?: (id: string | null) => void;
   onToggleTask: (id: string) => void;
   onChangeTaskStatus: (id: string, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
@@ -53,6 +55,8 @@ export function TaskList({
   roadmaps = [],
   lists = [],
   onCreateList,
+  selectedListId = null,
+  onSelectList,
   onToggleTask,
   onChangeTaskStatus,
   onDeleteTask,
@@ -70,9 +74,9 @@ export function TaskList({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"project" | "today">("project");
-  const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [isCreatingList, setIsCreatingList] = useState(false);
   const [newListName, setNewListName] = useState("");
+  const isSubmittingListRef = useRef(false);
 
   const handleDragStart = useCallback((index: number) => {
     setDragIndex(index);
@@ -295,16 +299,16 @@ export function TaskList({
 
       {viewMode === "project" ? (
         <>
-          {/* Listタブ */}
-          <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none">
-            <div className="flex p-1 bg-secondary/20 rounded-2xl glass flex-shrink-0">
+          {/* Listタブ — Projects配下のフィルター（上段モード切り替えより一段小さく） */}
+          <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 scrollbar-none pl-1">
+            <div className="flex p-0.5 bg-muted rounded-xl flex-shrink-0">
               <button
-                onClick={() => setSelectedListId(null)}
+                onClick={() => onSelectList?.(null)}
                 className={cn(
-                  "px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 outline-none",
+                  "px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 outline-none",
                   selectedListId === null
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 All
@@ -312,12 +316,12 @@ export function TaskList({
               {lists.map((list) => (
                 <button
                   key={list.id}
-                  onClick={() => setSelectedListId(list.id)}
+                  onClick={() => onSelectList?.(list.id)}
                   className={cn(
-                    "px-4 sm:px-6 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 outline-none",
+                    "px-3 py-1 rounded-lg text-xs font-medium transition-all duration-200 outline-none",
                     selectedListId === list.id
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                      ? "bg-secondary text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {list.name}
@@ -335,9 +339,11 @@ export function TaskList({
                 onChange={(e) => setNewListName(e.target.value)}
                 onKeyDown={async (e) => {
                   if (e.key === "Enter" && newListName.trim()) {
+                    isSubmittingListRef.current = true;
                     await onCreateList?.(newListName.trim());
                     setNewListName("");
                     setIsCreatingList(false);
+                    isSubmittingListRef.current = false;
                   }
                   if (e.key === "Escape") {
                     setNewListName("");
@@ -345,6 +351,7 @@ export function TaskList({
                   }
                 }}
                 onBlur={() => {
+                  if (isSubmittingListRef.current) return;
                   setNewListName("");
                   setIsCreatingList(false);
                 }}
@@ -354,11 +361,11 @@ export function TaskList({
             ) : (
               <motion.button
                 onClick={() => setIsCreatingList(true)}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors outline-none"
+                className="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-muted-foreground hover:text-foreground transition-colors outline-none"
                 whileTap={{ scale: 0.95 }}
                 transition={springTransition}
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3 h-3" />
                 List
               </motion.button>
             )}
@@ -375,7 +382,7 @@ export function TaskList({
               return (
                 <div key={roadmap.id} className="flex flex-col gap-1.5 mb-3">
                   <motion.div layout className="flex items-center justify-between mb-1">
-                    <h2 className="text-sm font-semibold tracking-wide text-compass uppercase flex items-center gap-2">
+                    <h2 className="text-xs font-semibold tracking-wide text-compass flex items-center gap-2 line-clamp-1">
                       {label}
                     </h2>
                   </motion.div>
