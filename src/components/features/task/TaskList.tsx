@@ -34,6 +34,9 @@ interface TaskListProps {
   newlyBreakdownTaskId?: string | null;
   onDismissSchedulingPrompt?: () => void;
   streakDays?: number;
+  streakIsAtRisk?: boolean;
+  availableFreezes?: number;
+  onStreakFreeze?: () => void;
 }
 
 interface TaskWithIndex extends Task {
@@ -70,6 +73,9 @@ export function TaskList({
   newlyBreakdownTaskId,
   onDismissSchedulingPrompt,
   streakDays = 0,
+  streakIsAtRisk = false,
+  availableFreezes = 0,
+  onStreakFreeze,
 }: TaskListProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -272,7 +278,12 @@ export function TaskList({
             Today
           </button>
         </div>
-        <StreakBadge days={streakDays} />
+        <StreakBadge
+          days={streakDays}
+          isAtRisk={streakIsAtRisk}
+          availableFreezes={availableFreezes}
+          onFreeze={onStreakFreeze}
+        />
       </div>
 
       {/* Breakdown直後のインラインスケジューリングプロンプト */}

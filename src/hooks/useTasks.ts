@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Task, TaskStatus } from "@/components/features/task/TaskItem";
 import { v4 as uuidv4 } from "uuid";
 import { BreakdownResponseSchema, BreakdownTaskSchema } from "@/lib/schemas";
-import { getTodayStr } from "@/lib/date";
+import { getTodayStr, getYesterdayStr } from "@/lib/date";
 import { createClient } from "@/lib/supabase/client";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -19,6 +19,9 @@ export function useTasks() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [streakDays, setStreakDays] = useState(0);
+  const [streakIsAtRisk, setStreakIsAtRisk] = useState(false);
+  const [streakMilestone, setStreakMilestone] = useState<7 | 30 | null>(null);
+  const [availableFreezes, setAvailableFreezes] = useState(3);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -93,38 +96,80 @@ export function useTasks() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data } = await supabase
-      .from("daily_completion_log")
-      .select("log_date")
-      .eq("user_id", user.id)
-      .order("log_date", { ascending: false })
-      .limit(365);
-
-    if (!data || data.length === 0) {
-      setStreakDays(0);
-      return;
-    }
-
     const LogRowSchema = z.object({ log_date: z.string() });
+    const FreezeRowSchema = z.object({ freeze_date: z.string() });
+
+    const [logResult, freezeResult] = await Promise.all([
+      supabase
+        .from("daily_completion_log")
+        .select("log_date")
+        .eq("user_id", user.id)
+        .order("log_date", { ascending: false })
+        .limit(365),
+      supabase
+        .from("streak_freezes")
+        .select("freeze_date")
+        .eq("user_id", user.id)
+        .order("freeze_date", { ascending: false }),
+    ]);
+
+    const logData = logResult.data ?? [];
+    const freezeData = freezeResult.data ?? [];
+
+    const completedDates = new Set(
+      logData
+        .map((r) => LogRowSchema.safeParse(r))
+        .filter((p) => p.success)
+        .map((p) => p.data.log_date)
+    );
+    const freezeDates = new Set(
+      freezeData
+        .map((r) => FreezeRowSchema.safeParse(r))
+        .filter((p) => p.success)
+        .map((p) => p.data.freeze_date)
+    );
+
+    // 当月の使用済みFreeze数 → 残り回数を計算
+    const currentMonth = getTodayStr().slice(0, 7);
+    const usedFreezesThisMonth = [...freezeDates].filter((d) =>
+      d.startsWith(currentMonth)
+    ).length;
+    setAvailableFreezes(Math.max(0, 3 - usedFreezesThisMonth));
 
     const today = getTodayStr();
-    let streak = 0;
-    let cursor = today;
+    const yesterday = getYesterdayStr();
 
-    for (const row of data) {
-      const parsed = LogRowSchema.safeParse(row);
-      if (!parsed.success) break;
-      if (parsed.data.log_date === cursor) {
-        streak++;
-        const [y, m, d] = cursor.split("-").map(Number);
-        const prev = new Date(Date.UTC(y!, m! - 1, d! - 1));
-        cursor = prev.toISOString().split("T")[0] ?? cursor;
-      } else {
-        break;
-      }
+    const isCredited = (date: string) =>
+      completedDates.has(date) || freezeDates.has(date);
+
+    // 今日が未クレジットなら昨日からカウント開始（at-risk状態）
+    const startFromYesterday = !isCredited(today);
+    let cursor = startFromYesterday ? yesterday : today;
+    let streak = 0;
+
+    while (isCredited(cursor)) {
+      streak++;
+      const [y, m, d] = cursor.split("-").map(Number);
+      const prev = new Date(Date.UTC(y!, m! - 1, d! - 1));
+      cursor = prev.toISOString().split("T")[0] ?? cursor;
     }
 
     setStreakDays(streak);
+
+    // at-risk: streakが1以上かつ今日未クレジット
+    const isAtRisk = streak > 0 && startFromYesterday && isCredited(yesterday);
+    setStreakIsAtRisk(isAtRisk);
+
+    // マイルストーン判定（既読フラグはlocalStorageで管理）
+    if (streak === 7 || streak === 30) {
+      const milestoneKey = `streak_milestone_seen_${streak}`;
+      const alreadySeen =
+        typeof window !== "undefined" &&
+        localStorage.getItem(milestoneKey) === "true";
+      if (!alreadySeen) {
+        setStreakMilestone(streak);
+      }
+    }
   }, [supabase]);
 
   useEffect(() => {
@@ -149,6 +194,25 @@ export function useTasks() {
 
     void fetchStreak();
   }, [supabase, fetchStreak]);
+
+  const applyStreakFreeze = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const today = getTodayStr();
+    await supabase
+      .from("streak_freezes")
+      .upsert({ user_id: user.id, freeze_date: today }, { onConflict: "user_id,freeze_date" });
+
+    void fetchStreak();
+  }, [supabase, fetchStreak]);
+
+  const clearStreakMilestone = useCallback(() => {
+    if (streakMilestone !== null && typeof window !== "undefined") {
+      localStorage.setItem(`streak_milestone_seen_${streakMilestone}`, "true");
+    }
+    setStreakMilestone(null);
+  }, [streakMilestone]);
 
   // ─── CRUD ───────────────────────────────────────────────────────────────────
 
@@ -797,6 +861,9 @@ export function useTasks() {
     isBreakingDown: isLoading,
     completedCount,
     streakDays,
+    streakIsAtRisk,
+    streakMilestone,
+    availableFreezes,
     todayTasks,
     scheduledTasks,
     somedayTasks,
@@ -815,5 +882,7 @@ export function useTasks() {
     importFromRoadmap,
     scheduleTask,
     unscheduleTask,
+    applyStreakFreeze,
+    clearStreakMilestone,
   };
 }
