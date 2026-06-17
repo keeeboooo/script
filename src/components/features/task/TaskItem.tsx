@@ -6,11 +6,13 @@ import { CheckCircle2, Circle, Compass, X, GripVertical, Pencil, Play, Undo2, Wa
 import type { Roadmap } from "@/hooks/useCompass";
 import type { List } from "@/hooks/useLists";
 import { SchedulingPicker } from "./SchedulingPicker";
+import { CompletionReward } from "./CompletionReward";
 import { cn } from "@/lib/utils";
 import { springTransition } from "@/lib/motion";
 import { formatScheduleBadge } from "@/lib/date";
 import { toast } from "sonner";
 import { ApiError, getUserFriendlyErrorMessage, NETWORK_ERROR_MESSAGE } from "@/lib/errors";
+import { pickReward, type RewardType } from "@/lib/rewards";
 
 export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'canceled';
 
@@ -51,6 +53,7 @@ interface TaskItemProps {
   onDragOver?: (index: number) => void;
   onDragEnd?: () => void;
   isSubTask?: boolean;
+  streakDays?: number;
 }
 
 const itemVariants = {
@@ -77,8 +80,10 @@ export function TaskItem({
   onDragOver,
   onDragEnd,
   isSubTask = false,
+  streakDays = 0,
 }: TaskItemProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [activeReward, setActiveReward] = useState<RewardType | null>(null);
   const [editValue, setEditValue] = useState(task.title);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showAllSubtasks, setShowAllSubtasks] = useState(false);
@@ -99,6 +104,20 @@ export function TaskItem({
   ).length;
   const progressPercentage = hasSubtasks ? (completedSubtasks / totalSubtasks) * 100 : 0;
   const isAllSubtasksCompleted = hasSubtasks && completedSubtasks === totalSubtasks;
+
+  const handleToggle = () => {
+    const willComplete = task.status !== 'done';
+    if (willComplete) {
+      const rewardType = pickReward({
+        hasLinkedGoal: !!task.linkedGoal,
+        linkedGoalName: task.linkedGoal ?? '',
+        isAllSubtasksCompleted,
+        streakDaysAfter: streakDays + 1,
+      });
+      setActiveReward(rewardType);
+    }
+    onToggle(task.id);
+  };
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -197,10 +216,10 @@ export function TaskItem({
 
         {/* Toggle button */}
         <motion.button
-          onClick={() => onToggle(task.id)}
+          onClick={handleToggle}
           aria-label={task.status === "done" ? "タスクを未完了に戻す" : "タスクを完了する"}
           className={cn(
-            "group/toggle mt-1 relative flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors",
+            "group/toggle mt-1 relative flex items-center justify-center flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors overflow-visible",
             isSubTask ? "w-4 h-4" : "w-6 h-6"
           )}
           whileTap={{ scale: 0.8 }}
@@ -273,6 +292,17 @@ export function TaskItem({
               )}
             />
           )}
+          <AnimatePresence>
+            {activeReward !== null && (
+              <CompletionReward
+                key={activeReward}
+                type={activeReward}
+                linkedGoalName={task.linkedGoal}
+                streakDays={streakDays + 1}
+                onComplete={() => setActiveReward(null)}
+              />
+            )}
+          </AnimatePresence>
         </motion.button>
 
         {/* Content */}

@@ -219,6 +219,7 @@ export function TaskList({
               onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
               isSubTask={compact}
+              streakDays={streakDays}
             />
           ))}
           {groupTasks.length === 0 && showEmptyIfZero && (
