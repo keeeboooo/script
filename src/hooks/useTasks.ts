@@ -305,8 +305,11 @@ export function useTasks() {
   );
 
   const reorderTasks = useCallback(
-    async (fromIndex: number, toIndex: number) => {
+    async (fromId: string, toId: string) => {
       const updated = [...tasks];
+      const fromIndex = updated.findIndex((t) => t.id === fromId);
+      const toIndex = updated.findIndex((t) => t.id === toId);
+      if (fromIndex === -1 || toIndex === -1) return;
       const [moved] = updated.splice(fromIndex, 1);
       updated.splice(toIndex, 0, moved);
       setTasks(updated);
@@ -671,6 +674,11 @@ export function useTasks() {
         await supabase.from("tasks").delete().in("id", oldSubTaskIds);
       }
 
+      const updatedFirstStep = parsed.data.firstStep ?? null;
+      if (updatedFirstStep !== null) {
+        await supabase.from("tasks").update({ first_step: updatedFirstStep }).eq("id", taskId);
+      }
+
       setTasks((prev) => {
         const withoutOldSubtasks = prev.filter((t) => t.parentId !== taskId);
         const newTaskItems: Task[] = newSubTasks.map((t) => ({
@@ -684,7 +692,9 @@ export function useTasks() {
         const parentIndex = withoutOldSubtasks.findIndex((t) => t.id === taskId);
         const result = [...withoutOldSubtasks];
         result.splice(parentIndex + 1, 0, ...newTaskItems);
-        return result;
+        return result.map((t) =>
+          t.id === taskId && updatedFirstStep !== null ? { ...t, firstStep: updatedFirstStep } : t
+        );
       });
     },
     [tasks, supabase]
