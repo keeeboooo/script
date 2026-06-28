@@ -351,7 +351,7 @@ export function TaskItem({
                       <span className="hidden sm:inline">サブタスク</span>
                     </div>
                   )}
-                  {isFirstSubTask && task.status !== "done" && task.status !== "canceled" && (
+                  {isFirstSubTask && (
                     <span className="flex items-center gap-1 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md text-xs font-medium text-primary">
                       ⚡ まず
                     </span>
