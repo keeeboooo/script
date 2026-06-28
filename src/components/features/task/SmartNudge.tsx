@@ -20,7 +20,7 @@ interface PhilosophyValue {
 interface SmartNudgeSuggestion {
   task: Task;
   reason: string;
-  alignedValue?: string;
+  alignedValue: string | undefined;
 }
 
 interface SmartNudgeProps {
