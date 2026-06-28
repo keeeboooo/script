@@ -35,6 +35,16 @@
   --color-compass-muted: #235454;
   --color-compass-subtle: rgba(45, 106, 106, 0.08);
   --color-compass-border: rgba(45, 106, 106, 0.18);
+
+  /* ステータス表示用（Reality Check 等） — 紙・インクの世界観に馴染む落ち着いた色調 */
+  --color-warning: #9C6B1F;
+  --color-warning-subtle: rgba(156, 107, 31, 0.12);
+  --color-warning-border: rgba(156, 107, 31, 0.3);
+  --color-success: #2F6B45;
+  --color-success-subtle: rgba(47, 107, 69, 0.12);
+  --color-success-border: rgba(47, 107, 69, 0.3);
+  --color-destructive-subtle: rgba(155, 35, 53, 0.12);
+  --color-destructive-border: rgba(155, 35, 53, 0.3);
 }
 
 /*

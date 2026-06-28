@@ -840,11 +840,7 @@ export function useCompass() {
 
   const runRealityCheck = useCallback(
     async (roadmapId: string) => {
-      let roadmap: Roadmap | undefined;
-      setRoadmaps((prev) => {
-        roadmap = prev.find((r) => r.id === roadmapId);
-        return prev;
-      });
+      const roadmap = roadmaps.find((r) => r.id === roadmapId);
       if (!roadmap) return;
 
       setIsRealityCheckLoading((prev) => ({ ...prev, [roadmapId]: true }));
@@ -882,7 +878,7 @@ export function useCompass() {
         setIsRealityCheckLoading((prev) => ({ ...prev, [roadmapId]: false }));
       }
     },
-    []
+    [roadmaps]
   );
 
   return {

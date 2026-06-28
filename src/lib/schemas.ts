@@ -106,10 +106,9 @@ export const RoadmapRequestSchema = z.object({
 
 // ─── Compass: Reality Check ───────────────────────────────────────────────────
 
-export const RealityCheckMilestoneInputSchema = z.object({
-  period: z.string(),
-  title: z.string(),
-  description: z.string(),
+export const RealityCheckMilestoneInputSchema = MilestoneSchema.omit({
+  keyActions: true,
+}).extend({
   isCompleted: z.boolean().optional(),
   isImported: z.boolean().optional(),
 });

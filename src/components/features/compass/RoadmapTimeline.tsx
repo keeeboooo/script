@@ -25,9 +25,9 @@ interface RoadmapTimelineProps {
 
 const STATUS_CONFIG = {
   on_track: { label: "順調", icon: TrendingUp, className: "bg-compass/15 text-compass border-compass/30" },
-  ahead: { label: "計画以上", icon: TrendingUp, className: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" },
-  at_risk: { label: "要注意", icon: AlertTriangle, className: "bg-amber-500/15 text-amber-600 border-amber-500/30" },
-  behind: { label: "遅延", icon: TrendingDown, className: "bg-red-500/15 text-red-600 border-red-500/30" },
+  ahead: { label: "計画以上", icon: TrendingUp, className: "bg-success-subtle text-success border-success-border" },
+  at_risk: { label: "要注意", icon: AlertTriangle, className: "bg-warning-subtle text-warning border-warning-border" },
+  behind: { label: "遅延", icon: TrendingDown, className: "bg-destructive-subtle text-destructive border-destructive-border" },
 } as const;
 
 function RealityCheckResultCard({ result }: { result: RealityCheckResult }) {
@@ -73,11 +73,11 @@ function RealityCheckResultCard({ result }: { result: RealityCheckResult }) {
 
               {result.issues.length > 0 && (
                 <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-amber-600/80 uppercase tracking-wider">課題</p>
+                  <p className="text-xs font-medium text-warning/80 uppercase tracking-wider">課題</p>
                   <ul className="space-y-1">
                     {result.issues.map((issue, i) => (
                       <li key={i} className="flex items-start gap-2 text-xs text-foreground/70">
-                        <AlertTriangle className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <AlertTriangle className="w-3 h-3 text-warning flex-shrink-0 mt-0.5" />
                         {issue}
                       </li>
                     ))}
