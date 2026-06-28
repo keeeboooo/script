@@ -40,8 +40,8 @@ interface TaskItemProps {
   onScheduleTask?: (id: string, date: string, time?: string) => void;
   onUnscheduleTask?: (id: string) => void;
   index?: number;
-  onDragStart?: (index: number) => void;
-  onDragOver?: (index: number) => void;
+  onDragStart?: (id: string) => void;
+  onDragOver?: (id: string) => void;
   onDragEnd?: () => void;
   isSubTask?: boolean;
 }
@@ -157,10 +157,10 @@ export function TaskItem({
       exit="exit"
       custom={index}
       draggable={!!onDragStart}
-      onDragStart={() => onDragStart?.(index)}
+      onDragStart={() => onDragStart?.(task.id)}
       onDragOver={(e) => {
         e.preventDefault();
-        onDragOver?.(index);
+        onDragOver?.(task.id);
       }}
       onDragEnd={onDragEnd}
       className={cn(

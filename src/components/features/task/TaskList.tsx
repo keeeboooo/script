@@ -17,7 +17,7 @@ interface TaskListProps {
   onChangeTaskStatus: (id: string, status: TaskStatus) => void;
   onDeleteTask: (id: string) => void;
   onEditTask: (id: string, newTitle: string) => void;
-  onReorderTasks: (fromIndex: number, toIndex: number) => void;
+  onReorderTasks: (fromId: string, toId: string) => void;
   onEditBreakdown?: (taskId: string, instruction: string) => Promise<void>;
   onScheduleTask?: (id: string, date: string, time?: string) => void;
   onUnscheduleTask?: (id: string) => void;
@@ -55,26 +55,26 @@ export function TaskList({
   onDismissSchedulingPrompt,
   streakDays = 0,
 }: TaskListProps) {
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [overIndex, setOverIndex] = useState<number | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"project" | "today">("project");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  const handleDragStart = useCallback((index: number) => {
-    setDragIndex(index);
+  const handleDragStart = useCallback((id: string) => {
+    setDragId(id);
   }, []);
 
-  const handleDragOver = useCallback((index: number) => {
-    setOverIndex(index);
+  const handleDragOver = useCallback((id: string) => {
+    setOverId(id);
   }, []);
 
   const handleDragEnd = useCallback(() => {
-    if (dragIndex !== null && overIndex !== null && dragIndex !== overIndex) {
-      onReorderTasks(dragIndex, overIndex);
+    if (dragId !== null && overId !== null && dragId !== overId) {
+      onReorderTasks(dragId, overId);
     }
-    setDragIndex(null);
-    setOverIndex(null);
-  }, [dragIndex, overIndex, onReorderTasks]);
+    setDragId(null);
+    setOverId(null);
+  }, [dragId, overId, onReorderTasks]);
 
   const tasksWithIndex: TaskWithIndex[] = useMemo(
     () => tasks.map((task, index) => ({ ...task, originalIndex: index })),

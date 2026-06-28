@@ -303,8 +303,11 @@ export function useTasks() {
   );
 
   const reorderTasks = useCallback(
-    async (fromIndex: number, toIndex: number) => {
+    async (fromId: string, toId: string) => {
       const updated = [...tasks];
+      const fromIndex = updated.findIndex((t) => t.id === fromId);
+      const toIndex = updated.findIndex((t) => t.id === toId);
+      if (fromIndex === -1 || toIndex === -1) return;
       const [moved] = updated.splice(fromIndex, 1);
       updated.splice(toIndex, 0, moved);
       setTasks(updated);
