@@ -6,6 +6,7 @@ import {
   PhilosophyWithMetaSchema,
   RoadmapResponseSchema,
   ChatResponseSchema,
+  RealityCheckResponseSchema,
 } from "@/lib/schemas";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -56,6 +57,13 @@ export interface Roadmap {
   goal: string;
   timeframe: string;
   milestones: Milestone[];
+}
+
+export interface RealityCheckResult {
+  overallStatus: "on_track" | "at_risk" | "behind" | "ahead";
+  progressSummary: string;
+  issues: string[];
+  pivotSuggestions: string[];
 }
 
 // 新規セッションを示すセンチネル値
@@ -158,6 +166,10 @@ export function useCompass() {
   // Roadmap
   const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
   const [isRoadmapLoading, setIsRoadmapLoading] = useState(false);
+
+  // Reality Check (ページメモリのみ保持、DBへの永続化なし)
+  const [realityChecks, setRealityChecks] = useState<Record<string, RealityCheckResult>>({});
+  const [isRealityCheckLoading, setIsRealityCheckLoading] = useState<Record<string, boolean>>({});
 
   // ─── 初期データ取得 ───────────────────────────────────────────────────────
 
@@ -826,6 +838,49 @@ export function useCompass() {
     [supabase]
   );
 
+  const runRealityCheck = useCallback(
+    async (roadmapId: string) => {
+      const roadmap = roadmaps.find((r) => r.id === roadmapId);
+      if (!roadmap) return;
+
+      setIsRealityCheckLoading((prev) => ({ ...prev, [roadmapId]: true }));
+      try {
+        const response = await fetch("/api/compass/reality-check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            goal: roadmap.goal,
+            timeframe: roadmap.timeframe,
+            milestones: roadmap.milestones.map((m) => ({
+              period: m.period,
+              title: m.title,
+              description: m.description,
+              isCompleted: m.isCompleted,
+              isImported: m.isImported,
+            })),
+          }),
+        });
+
+        if (!response.ok) throw await parseApiError(response);
+
+        const parsed = RealityCheckResponseSchema.safeParse(await response.json());
+        if (!parsed.success) throw new ApiError(502, "AI_PARSE_FAILURE");
+
+        setRealityChecks((prev) => ({ ...prev, [roadmapId]: parsed.data }));
+      } catch (error: unknown) {
+        console.error("Failed to run reality check:", error);
+        if (error instanceof ApiError) {
+          toast.error(getUserFriendlyErrorMessage(error.status, error.errorCode));
+        } else {
+          toast.error(NETWORK_ERROR_MESSAGE);
+        }
+      } finally {
+        setIsRealityCheckLoading((prev) => ({ ...prev, [roadmapId]: false }));
+      }
+    },
+    [roadmaps]
+  );
+
   return {
     // Philosophy list
     philosophies,
@@ -857,5 +912,9 @@ export function useCompass() {
     updateMilestone,
     deleteMilestone,
     editRoadmapWithAI,
+    // Reality Check
+    runRealityCheck,
+    realityChecks,
+    isRealityCheckLoading,
   };
 }
