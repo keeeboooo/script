@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Task, TaskStatus } from "@/components/features/task/TaskItem";
 import { v4 as uuidv4 } from "uuid";
 import { BreakdownResponseSchema, BreakdownTaskSchema } from "@/lib/schemas";
-import { getTodayStr, getYesterdayStr } from "@/lib/date";
+import { getTodayStr, getYesterdayStr, toDateStr } from "@/lib/date";
 import { createClient } from "@/lib/supabase/client";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -21,7 +21,7 @@ export function useTasks() {
   const [streakDays, setStreakDays] = useState(0);
   const [streakIsAtRisk, setStreakIsAtRisk] = useState(false);
   const [streakMilestone, setStreakMilestone] = useState<7 | 30 | null>(null);
-  const [availableFreezes, setAvailableFreezes] = useState(3);
+  const [availableFreezes, setAvailableFreezes] = useState<number | null>(null);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -110,7 +110,8 @@ export function useTasks() {
         .from("streak_freezes")
         .select("freeze_date")
         .eq("user_id", user.id)
-        .order("freeze_date", { ascending: false }),
+        .order("freeze_date", { ascending: false })
+        .limit(365),
     ]);
 
     const logData = logResult.data ?? [];
@@ -149,9 +150,11 @@ export function useTasks() {
 
     while (isCredited(cursor)) {
       streak++;
-      const [y, m, d] = cursor.split("-").map(Number);
-      const prev = new Date(Date.UTC(y!, m! - 1, d! - 1));
-      cursor = prev.toISOString().split("T")[0] ?? cursor;
+      const parts = cursor.split("-").map(Number);
+      if (parts.length < 3 || parts.some(isNaN)) break;
+      const [y, m, d] = parts as [number, number, number];
+      const prevDate = new Date(y, m - 1, d - 1);
+      cursor = toDateStr(prevDate);
     }
 
     setStreakDays(streak);
@@ -200,6 +203,20 @@ export function useTasks() {
     if (!user) return;
 
     const today = getTodayStr();
+    const currentMonth = today.slice(0, 7);
+
+    // サーバーサイドで当月の使用数を再確認してから挿入
+    const { count } = await supabase
+      .from("streak_freezes")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("freeze_date", `${currentMonth}-01`);
+
+    if ((count ?? 0) >= 3) {
+      toast.error("今月のStreak Freezeは使い切りました（月3回まで）");
+      return;
+    }
+
     await supabase
       .from("streak_freezes")
       .upsert({ user_id: user.id, freeze_date: today }, { onConflict: "user_id,freeze_date" });

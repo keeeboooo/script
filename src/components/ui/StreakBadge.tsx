@@ -28,7 +28,7 @@ export function StreakBadge({
         className={cn(
           "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors",
           isAtRisk
-            ? "bg-amber-500/15 border border-amber-500/30 text-amber-700 animate-pulse"
+            ? "bg-warning-subtle border border-warning-border text-warning animate-pulse"
             : isActive
             ? "bg-primary/10 border border-primary/20 text-foreground"
             : "bg-secondary/30 border border-foreground/10 text-muted-foreground"
@@ -49,7 +49,7 @@ export function StreakBadge({
         {isActive ? (
           <span>
             <span className="font-bold text-sm">{days}</span>
-            <span className={cn("ml-0.5", isAtRisk ? "text-amber-700/70" : "text-muted-foreground")}>
+            <span className={cn("ml-0.5", isAtRisk ? "text-warning/70" : "text-muted-foreground")}>
               日連続
             </span>
           </span>
@@ -61,14 +61,14 @@ export function StreakBadge({
       {canFreeze && (
         <motion.button
           onClick={onFreeze}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-sky-500/15 border border-sky-500/30 text-sky-700 hover:bg-sky-500/25 transition-colors"
+          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-compass-subtle border border-compass-border text-compass hover:bg-compass-subtle/60 transition-colors"
           whileHover={{ y: -1 }}
           whileTap={{ scale: 0.95 }}
           transition={springTransition}
           title={`Streak Freeze を使う（残り${availableFreezes}回）`}
         >
           🧊 <span className="hidden sm:inline">Freeze</span>
-          <span className="text-sky-700/60 text-xs">×{availableFreezes}</span>
+          <span className="text-compass/60 text-xs">×{availableFreezes}</span>
         </motion.button>
       )}
     </div>

@@ -35,7 +35,7 @@ interface TaskListProps {
   onDismissSchedulingPrompt?: () => void;
   streakDays?: number;
   streakIsAtRisk?: boolean;
-  availableFreezes?: number;
+  availableFreezes?: number | null;
   onStreakFreeze?: () => void;
 }
 
@@ -281,8 +281,8 @@ export function TaskList({
         <StreakBadge
           days={streakDays}
           isAtRisk={streakIsAtRisk}
-          availableFreezes={availableFreezes}
-          onFreeze={onStreakFreeze}
+          availableFreezes={availableFreezes ?? 0}
+          onFreeze={availableFreezes !== null ? onStreakFreeze : undefined}
         />
       </div>
 
