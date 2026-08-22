@@ -6,6 +6,12 @@ export function getTodayStr(): string {
   return toDateStr(new Date());
 }
 
+export function getYesterdayStr(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return toDateStr(d);
+}
+
 export function getTomorrowStr(): string {
   const d = new Date();
   d.setDate(d.getDate() + 1);
