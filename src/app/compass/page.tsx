@@ -46,6 +46,10 @@ export default function CompassPage() {
     updateMilestone,
     deleteMilestone,
     editRoadmapWithAI,
+    // Reality Check
+    runRealityCheck,
+    realityChecks,
+    isRealityCheckLoading,
   } = useCompass();
 
   const { importFromRoadmap } = useTasks();
@@ -328,6 +332,9 @@ export default function CompassPage() {
                 onEditRoadmapWithAI={(roadmapId, instruction) =>
                   editRoadmapWithAI(roadmapId, instruction)
                 }
+                onRunRealityCheck={() => runRealityCheck(selectedRoadmap.id)}
+                realityCheckResult={realityChecks[selectedRoadmap.id]}
+                isRealityCheckLoading={isRealityCheckLoading[selectedRoadmap.id] ?? false}
               />
             </motion.div>
           ) : !isRoadmapLoading && roadmaps.length > 0 ? (

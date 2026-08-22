@@ -104,11 +104,34 @@ export const RoadmapRequestSchema = z.object({
   }).optional(),
 });
 
+// ─── Compass: Reality Check ───────────────────────────────────────────────────
+
+export const RealityCheckMilestoneInputSchema = MilestoneSchema.omit({
+  keyActions: true,
+}).extend({
+  isCompleted: z.boolean().optional(),
+  isImported: z.boolean().optional(),
+});
+
+export const RealityCheckRequestSchema = z.object({
+  goal: z.string().min(1),
+  timeframe: z.string().min(1),
+  milestones: z.array(RealityCheckMilestoneInputSchema),
+});
+
+export const RealityCheckResponseSchema = z.object({
+  overallStatus: z.enum(["on_track", "at_risk", "behind", "ahead"]),
+  progressSummary: z.string(),
+  issues: z.array(z.string()),
+  pivotSuggestions: z.array(z.string()),
+});
+
 // ─── Nudge ────────────────────────────────────────────────────────────────────
 
 export const NudgeSuggestionSchema = z.object({
   taskId: z.string(),
   reason: z.string(),
+  alignedValue: z.string().optional(),
 });
 
 export const NudgeResponseSchema = z.object({
@@ -118,6 +141,24 @@ export const NudgeResponseSchema = z.object({
 export const NudgeCacheSchema = z.object({
   date: z.string(),
   suggestions: z.array(NudgeSuggestionSchema),
+});
+
+export const NudgePhilosophyValueSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+});
+
+export const NudgeRequestSchema = z.object({
+  tasks: z.array(
+    z.object({
+      id: z.string(),
+      title: z.string(),
+      estimatedMinutes: z.number().optional(),
+      parentTitle: z.string().optional(),
+      linkedGoal: z.string().optional(),
+    })
+  ).min(1),
+  philosophyValues: z.array(NudgePhilosophyValueSchema).optional(),
 });
 
 // ─── Compass: Roadmap DB row ──────────────────────────────────────────────────
