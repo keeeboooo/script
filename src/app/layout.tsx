@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { HeaderNav } from "@/components/ui/HeaderNav";
 import { Toaster } from "sonner";
@@ -6,8 +6,18 @@ import { Toaster } from "sonner";
 export const metadata: Metadata = {
   title: "Script",
   description: "Follow the Script. AI-powered task breakdown and execution partner.",
+  manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.svg",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: "/apple-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Script",
   },
   openGraph: {
     title: "Script",
@@ -19,6 +29,10 @@ export const metadata: Metadata = {
     title: "Script",
     description: "Follow the Script. AI-powered task breakdown and execution partner.",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#F5F0E8",
 };
 
 export default function RootLayout({
