@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ArrowRight, Check, Pencil, Trash2, Plus, X, Wand2, Send, Loader2, Circle } from "lucide-react";
+import { MapPin, ArrowRight, Check, Pencil, Trash2, Plus, X, Wand2, Send, Loader2, Circle, Activity, TrendingUp, TrendingDown, AlertTriangle, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { springTransition, STAGGER_FAST } from "@/lib/motion";
 import { toast } from "sonner";
 import { ApiError, getUserFriendlyErrorMessage, NETWORK_ERROR_MESSAGE } from "@/lib/errors";
-import type { Milestone, Roadmap } from "@/hooks/useCompass";
+import type { Milestone, Roadmap, RealityCheckResult } from "@/hooks/useCompass";
 
 interface RoadmapTimelineProps {
   roadmap: Roadmap;
@@ -18,6 +18,92 @@ interface RoadmapTimelineProps {
   onDeleteMilestone: (milestoneId: string) => void;
   onCompleteMilestone?: (milestoneId: string, done: boolean) => Promise<void>;
   onEditRoadmapWithAI?: (roadmapId: string, instruction: string) => Promise<void>;
+  onRunRealityCheck?: () => Promise<void>;
+  realityCheckResult?: RealityCheckResult;
+  isRealityCheckLoading?: boolean;
+}
+
+const STATUS_CONFIG = {
+  on_track: { label: "順調", icon: TrendingUp, className: "bg-compass/15 text-compass border-compass/30" },
+  ahead: { label: "計画以上", icon: TrendingUp, className: "bg-success-subtle text-success border-success-border" },
+  at_risk: { label: "要注意", icon: AlertTriangle, className: "bg-warning-subtle text-warning border-warning-border" },
+  behind: { label: "遅延", icon: TrendingDown, className: "bg-destructive-subtle text-destructive border-destructive-border" },
+} as const;
+
+function RealityCheckResultCard({ result }: { result: RealityCheckResult }) {
+  const [expanded, setExpanded] = useState(true);
+  const config = STATUS_CONFIG[result.overallStatus];
+  const StatusIcon = config.icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={springTransition}
+      className="glass-compass rounded-2xl overflow-hidden border border-compass-border/40"
+    >
+      <button
+        onClick={() => setExpanded((prev) => !prev)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-compass/5 transition-colors"
+        aria-expanded={expanded}
+      >
+        <div className="flex items-center gap-2">
+          <Activity className="w-4 h-4 text-compass" />
+          <span className="text-sm font-medium text-compass">Reality Check</span>
+          <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border", config.className)}>
+            <StatusIcon className="w-3 h-3" />
+            {config.label}
+          </span>
+        </div>
+        <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", expanded && "rotate-180")} />
+      </button>
+
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0 }}
+            animate={{ height: "auto" }}
+            exit={{ height: 0 }}
+            transition={springTransition}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 space-y-3">
+              <p className="text-sm text-foreground/80 leading-relaxed">{result.progressSummary}</p>
+
+              {result.issues.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-warning/80 uppercase tracking-wider">課題</p>
+                  <ul className="space-y-1">
+                    {result.issues.map((issue, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-foreground/70">
+                        <AlertTriangle className="w-3 h-3 text-warning flex-shrink-0 mt-0.5" />
+                        {issue}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {result.pivotSuggestions.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-compass/80 uppercase tracking-wider">改善提案</p>
+                  <ul className="space-y-1">
+                    {result.pivotSuggestions.map((suggestion, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-foreground/70">
+                        <span className="text-compass/50 flex-shrink-0 mt-0.5">→</span>
+                        {suggestion}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
 }
 
 const listVariants = {
@@ -190,6 +276,9 @@ export function RoadmapTimeline({
   onDeleteMilestone,
   onCompleteMilestone,
   onEditRoadmapWithAI,
+  onRunRealityCheck,
+  realityCheckResult,
+  isRealityCheckLoading = false,
 }: RoadmapTimelineProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [isAIEditOpen, setIsAIEditOpen] = useState(false);
@@ -256,25 +345,51 @@ export function RoadmapTimeline({
             inputClassName="text-sm"
           />
         </div>
-        {onEditRoadmapWithAI && (
-          <motion.button
-            onClick={() => setIsAIEditOpen((prev) => !prev)}
-            className={cn(
-              "flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
-              isAIEditOpen
-                ? "bg-compass/20 text-compass"
-                : "text-muted-foreground hover:text-compass hover:bg-compass-subtle border border-compass-border/40"
-            )}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            transition={springTransition}
-            aria-label="AIでロードマップを修正"
-            aria-pressed={isAIEditOpen}
-          >
-            <Wand2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">AIで修正</span>
-          </motion.button>
-        )}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {onRunRealityCheck && (
+            <motion.button
+              onClick={() => void onRunRealityCheck()}
+              disabled={isRealityCheckLoading}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                realityCheckResult
+                  ? "bg-compass/20 text-compass"
+                  : "text-muted-foreground hover:text-compass hover:bg-compass-subtle border border-compass-border/40",
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+              )}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              transition={springTransition}
+              aria-label="Reality Checkを実行"
+            >
+              {isRealityCheckLoading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Activity className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">Reality Check</span>
+            </motion.button>
+          )}
+          {onEditRoadmapWithAI && (
+            <motion.button
+              onClick={() => setIsAIEditOpen((prev) => !prev)}
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
+                isAIEditOpen
+                  ? "bg-compass/20 text-compass"
+                  : "text-muted-foreground hover:text-compass hover:bg-compass-subtle border border-compass-border/40"
+              )}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              transition={springTransition}
+              aria-label="AIでロードマップを修正"
+              aria-pressed={isAIEditOpen}
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">AIで修正</span>
+            </motion.button>
+          )}
+        </div>
       </div>
 
       {/* AI Edit Panel */}
@@ -315,6 +430,13 @@ export function RoadmapTimeline({
               </motion.button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reality Check Result */}
+      <AnimatePresence>
+        {realityCheckResult && (
+          <RealityCheckResultCard key="reality-check" result={realityCheckResult} />
         )}
       </AnimatePresence>
 

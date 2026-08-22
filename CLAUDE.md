@@ -14,6 +14,7 @@
 - デザイン体系: @.antigravity/skills/design_system.md
 - 最適化指針: @.antigravity/skills/performance.md
 - 型安全規約: @.antigravity/skills/type_safety.md
+- 行動設計: @.antigravity/skills/behavior_design.md
 
 # Priority
 1. **UX First**: ユーザーが「気持ちいい」と感じる挙動を最優先する。

@@ -26,21 +26,35 @@ TITLE RULES:
 - Write as a short, punchy verb phrase (e.g. "材料をAmazonで注文する", "レシピ動画を3本見る").
 - No explanations, no parenthetical notes — just the action.
 
+FIRST SUBTASK RULE:
+- tasks[0] MUST be a single physical action the user can start within 2 minutes.
+- tasks[0] must have estimatedMinutes ≤ 2.
+- BAD tasks[0]: "材料を確認する", "準備する", "調べる"
+- GOOD tasks[0]: "Amazonで「麺棒」と検索して商品ページを開く", "テキストエディタを開いて要件を1行書く"
+
 Respond STRICTLY with a JSON object matching this schema, without markdown formatting:
 {
   "tasks": [
     {
       "title": "動詞で始まる20文字以内の行動（日本語）",
       "estimatedTime": "15分",
+      "estimatedMinutes": 15,
       "actionLink": "https://example.com/useful-link"
     }
-  ]
+  ],
+  "firstStep": "今すぐ物理的に始められる最小の着手行動（1文、動詞で始める）"
 }
 
 Instructions for actionLink:
 - If a task involves buying something, provide an Amazon or specific store search link.
 - If it involves research, provide a Google specific search link or Wikipedia.
 - ONLY provide an actionLink if it's genuinely useful for immediate execution. Otherwise, omit it.
+
+Instructions for firstStep:
+- CRITICAL: The firstStep must be a PHYSICAL ACTION the user can start within 2 minutes right now.
+- It must be the absolute minimum step — not "prepare" or "plan", but a single concrete physical action.
+- If tasks[0] has not changed, keep the existing firstStep. If tasks[0] changed, update firstStep accordingly.
+- Write it as a concrete verb phrase in Japanese with a specific tool/site/object named.
 `;
 
 export async function POST(req: Request) {

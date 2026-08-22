@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Task, TaskStatus } from "@/components/features/task/TaskItem";
 import { v4 as uuidv4 } from "uuid";
 import { BreakdownResponseSchema, BreakdownTaskSchema } from "@/lib/schemas";
-import { getTodayStr } from "@/lib/date";
+import { getTodayStr, getYesterdayStr, toDateStr } from "@/lib/date";
 import { createClient } from "@/lib/supabase/client";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -19,6 +19,9 @@ export function useTasks() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [streakDays, setStreakDays] = useState(0);
+  const [streakIsAtRisk, setStreakIsAtRisk] = useState(false);
+  const [streakMilestone, setStreakMilestone] = useState<7 | 30 | null>(null);
+  const [availableFreezes, setAvailableFreezes] = useState<number | null>(null);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -42,6 +45,7 @@ export function useTasks() {
       linked_goal: string | null;
       linked_roadmap_id: string | null;
       linked_milestone_id: string | null;
+      list_id: string | null;
       scheduled_date: string | null;
       scheduled_time: string | null;
       first_step: string | null;
@@ -57,6 +61,7 @@ export function useTasks() {
       linkedGoal: row.linked_goal ?? undefined,
       linkedRoadmapId: row.linked_roadmap_id ?? undefined,
       linkedMilestoneId: row.linked_milestone_id ?? undefined,
+      listId: row.list_id ?? undefined,
       scheduledDate: row.scheduled_date ?? undefined,
       scheduledTime: row.scheduled_time ?? undefined,
       firstStep: row.first_step ?? undefined,
@@ -91,38 +96,83 @@ export function useTasks() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data } = await supabase
-      .from("daily_completion_log")
-      .select("log_date")
-      .eq("user_id", user.id)
-      .order("log_date", { ascending: false })
-      .limit(365);
-
-    if (!data || data.length === 0) {
-      setStreakDays(0);
-      return;
-    }
-
     const LogRowSchema = z.object({ log_date: z.string() });
+    const FreezeRowSchema = z.object({ freeze_date: z.string() });
+
+    const [logResult, freezeResult] = await Promise.all([
+      supabase
+        .from("daily_completion_log")
+        .select("log_date")
+        .eq("user_id", user.id)
+        .order("log_date", { ascending: false })
+        .limit(365),
+      supabase
+        .from("streak_freezes")
+        .select("freeze_date")
+        .eq("user_id", user.id)
+        .order("freeze_date", { ascending: false })
+        .limit(365),
+    ]);
+
+    const logData = logResult.data ?? [];
+    const freezeData = freezeResult.data ?? [];
+
+    const completedDates = new Set(
+      logData
+        .map((r) => LogRowSchema.safeParse(r))
+        .filter((p) => p.success)
+        .map((p) => p.data.log_date)
+    );
+    const freezeDates = new Set(
+      freezeData
+        .map((r) => FreezeRowSchema.safeParse(r))
+        .filter((p) => p.success)
+        .map((p) => p.data.freeze_date)
+    );
+
+    // 当月の使用済みFreeze数 → 残り回数を計算
+    const currentMonth = getTodayStr().slice(0, 7);
+    const usedFreezesThisMonth = [...freezeDates].filter((d) =>
+      d.startsWith(currentMonth)
+    ).length;
+    setAvailableFreezes(Math.max(0, 3 - usedFreezesThisMonth));
 
     const today = getTodayStr();
-    let streak = 0;
-    let cursor = today;
+    const yesterday = getYesterdayStr();
 
-    for (const row of data) {
-      const parsed = LogRowSchema.safeParse(row);
-      if (!parsed.success) break;
-      if (parsed.data.log_date === cursor) {
-        streak++;
-        const [y, m, d] = cursor.split("-").map(Number);
-        const prev = new Date(Date.UTC(y!, m! - 1, d! - 1));
-        cursor = prev.toISOString().split("T")[0] ?? cursor;
-      } else {
-        break;
-      }
+    const isCredited = (date: string) =>
+      completedDates.has(date) || freezeDates.has(date);
+
+    // 今日が未クレジットなら昨日からカウント開始（at-risk状態）
+    const startFromYesterday = !isCredited(today);
+    let cursor = startFromYesterday ? yesterday : today;
+    let streak = 0;
+
+    while (isCredited(cursor)) {
+      streak++;
+      const parts = cursor.split("-").map(Number);
+      if (parts.length < 3 || parts.some(isNaN)) break;
+      const [y, m, d] = parts as [number, number, number];
+      const prevDate = new Date(y, m - 1, d - 1);
+      cursor = toDateStr(prevDate);
     }
 
     setStreakDays(streak);
+
+    // at-risk: streakが1以上かつ今日未クレジット
+    const isAtRisk = streak > 0 && startFromYesterday && isCredited(yesterday);
+    setStreakIsAtRisk(isAtRisk);
+
+    // マイルストーン判定（既読フラグはlocalStorageで管理）
+    if (streak === 7 || streak === 30) {
+      const milestoneKey = `streak_milestone_seen_${streak}`;
+      const alreadySeen =
+        typeof window !== "undefined" &&
+        localStorage.getItem(milestoneKey) === "true";
+      if (!alreadySeen) {
+        setStreakMilestone(streak);
+      }
+    }
   }, [supabase]);
 
   useEffect(() => {
@@ -147,6 +197,39 @@ export function useTasks() {
 
     void fetchStreak();
   }, [supabase, fetchStreak]);
+
+  const applyStreakFreeze = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const today = getTodayStr();
+    const currentMonth = today.slice(0, 7);
+
+    // サーバーサイドで当月の使用数を再確認してから挿入
+    const { count } = await supabase
+      .from("streak_freezes")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("freeze_date", `${currentMonth}-01`);
+
+    if ((count ?? 0) >= 3) {
+      toast.error("今月のStreak Freezeは使い切りました（月3回まで）");
+      return;
+    }
+
+    await supabase
+      .from("streak_freezes")
+      .upsert({ user_id: user.id, freeze_date: today }, { onConflict: "user_id,freeze_date" });
+
+    void fetchStreak();
+  }, [supabase, fetchStreak]);
+
+  const clearStreakMilestone = useCallback(() => {
+    if (streakMilestone !== null && typeof window !== "undefined") {
+      localStorage.setItem(`streak_milestone_seen_${streakMilestone}`, "true");
+    }
+    setStreakMilestone(null);
+  }, [streakMilestone]);
 
   // ─── CRUD ───────────────────────────────────────────────────────────────────
 
@@ -303,8 +386,11 @@ export function useTasks() {
   );
 
   const reorderTasks = useCallback(
-    async (fromIndex: number, toIndex: number) => {
+    async (fromId: string, toId: string) => {
       const updated = [...tasks];
+      const fromIndex = updated.findIndex((t) => t.id === fromId);
+      const toIndex = updated.findIndex((t) => t.id === toId);
+      if (fromIndex === -1 || toIndex === -1) return;
       const [moved] = updated.splice(fromIndex, 1);
       updated.splice(toIndex, 0, moved);
       setTasks(updated);
@@ -425,6 +511,47 @@ export function useTasks() {
           })
         );
       }
+    },
+    [tasks, supabase]
+  );
+
+  // ─── Add Task (Inbox) ──────────────────────────────────────────────────────
+
+  const addTask = useCallback(
+    async (title: string, listId?: string): Promise<string | null> => {
+      const trimmed = title.trim();
+      if (!trimmed) return null;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const id = uuidv4();
+
+      // 既存タスクのpositionを1つずらしてからinsert
+      await supabase.from("tasks").upsert(
+        tasks.map((t, i) => ({ id: t.id, position: i + 1 }))
+      );
+
+      const { error } = await supabase.from("tasks").insert({
+        id,
+        user_id: user.id,
+        title: trimmed,
+        status: "todo",
+        position: 0,
+        list_id: listId ?? null,
+      });
+
+      if (error) {
+        toast.error("タスクの追加に失敗しました。");
+        return null;
+      }
+
+      setTasks((prev) => [
+        { id, title: trimmed, status: "todo", listId },
+        ...prev,
+      ]);
+
+      return id;
     },
     [tasks, supabase]
   );
@@ -628,6 +755,11 @@ export function useTasks() {
         await supabase.from("tasks").delete().in("id", oldSubTaskIds);
       }
 
+      const updatedFirstStep = parsed.data.firstStep ?? null;
+      if (updatedFirstStep !== null) {
+        await supabase.from("tasks").update({ first_step: updatedFirstStep }).eq("id", taskId);
+      }
+
       setTasks((prev) => {
         const withoutOldSubtasks = prev.filter((t) => t.parentId !== taskId);
         const newTaskItems: Task[] = newSubTasks.map((t) => ({
@@ -641,10 +773,49 @@ export function useTasks() {
         const parentIndex = withoutOldSubtasks.findIndex((t) => t.id === taskId);
         const result = [...withoutOldSubtasks];
         result.splice(parentIndex + 1, 0, ...newTaskItems);
-        return result;
+        return result.map((t) =>
+          t.id === taskId && updatedFirstStep !== null ? { ...t, firstStep: updatedFirstStep } : t
+        );
       });
     },
     [tasks, supabase]
+  );
+
+  // ─── Link Task to Roadmap ─────────────────────────────────────────────────
+
+  const linkTaskToRoadmap = useCallback(
+    async (taskId: string, roadmapId: string | null, roadmapTitle: string | null) => {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? { ...t, linkedRoadmapId: roadmapId ?? undefined, linkedGoal: roadmapTitle ?? undefined }
+            : t
+        )
+      );
+
+      await supabase
+        .from("tasks")
+        .update({
+          linked_roadmap_id: roadmapId,
+          linked_goal: roadmapTitle,
+        })
+        .eq("id", taskId);
+    },
+    [supabase]
+  );
+
+  // ─── Assign Task to List ──────────────────────────────────────────────────
+
+  const assignTaskToList = useCallback(
+    async (taskId: string, listId: string | null) => {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId ? { ...t, listId: listId ?? undefined } : t
+        )
+      );
+      await supabase.from("tasks").update({ list_id: listId }).eq("id", taskId);
+    },
+    [supabase]
   );
 
   // ─── Import from Roadmap (The Thread) ──────────────────────────────────────
@@ -717,11 +888,17 @@ export function useTasks() {
     isBreakingDown: isLoading,
     completedCount,
     streakDays,
+    streakIsAtRisk,
+    streakMilestone,
+    availableFreezes,
     todayTasks,
     scheduledTasks,
     somedayTasks,
+    addTask,
+    assignTaskToList,
     breakdownTask,
     editBreakdown,
+    linkTaskToRoadmap,
     toggleTask,
     changeTaskStatus,
     deleteTask,
@@ -732,5 +909,7 @@ export function useTasks() {
     importFromRoadmap,
     scheduleTask,
     unscheduleTask,
+    applyStreakFreeze,
+    clearStreakMilestone,
   };
 }
